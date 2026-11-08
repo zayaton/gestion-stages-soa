@@ -1,0 +1,29 @@
+# Maven
+target/
+
+# Journaux d'exécution des services
+logs/
+
+# Fichiers locaux, à ne pas publier
+PROMPT_CLAUDE_CODE_Projet_SOA.md
+/Enonce Projet SOA 26.pdf
+.env
+.claude/
+
+# Outils
+node_modules/
+__pycache__/
+.idea/
+.vscode/
+*.iml
+
+# LaTeX
+rapport/*.aux
+rapport/*.log
+rapport/*.out
+rapport/*.toc
+rapport/*.lof
+rapport/*.lot
+rapport/*.fls
+rapport/*.fdb_latexmk
+rapport/*.synctex.gz
