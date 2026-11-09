@@ -99,7 +99,8 @@ Write-Host 'Contraintes de la base'
 Test-Egal 'R5 : la base refuse un doublon non annulé' 1062 (Test-AccesCompte 'svc_candidatures' "INSERT INTO soa_candidatures.candidature (etudiant_id, offre_id, entreprise_id, lettre_motivation) VALUES (2,2,3,'doublon')")
 Test-Egal 'Un matricule mal formé est refusé' 3819 (Test-AccesCompte 'svc_etudiants' "INSERT INTO soa_etudiants.etudiant (matricule,nom,prenom,filiere,niveau,email,telephone,ville) VALUES ('X1','a','b','AMOA','1A','a@b.ma','06','Rabat')")
 Test-Egal 'Une note hors de 0 à 20 est refusée' 3819 (Test-AccesCompte 'svc_suivi' "INSERT INTO soa_suivi.evaluation (stage_id,note,evaluateur) VALUES (1,21,'x')")
-Test-Egal 'Fuseau horaire de MySQL : date du jour correcte' (Get-Date -Format 'yyyy-MM-dd') (Invoke-Sql 'SELECT CURDATE()')
+$jourMaroc = [TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), 'Morocco Standard Time').ToString('yyyy-MM-dd')
+Test-Egal 'Fuseau horaire de MySQL : date du jour au Maroc' $jourMaroc (Invoke-Sql 'SELECT CURDATE()')
 
 Write-Host ''
 Write-Host "Résultat : $($script:total - $script:echecs)/$($script:total) vérifications réussies"

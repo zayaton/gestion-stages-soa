@@ -1,6 +1,7 @@
 package ma.inpt.stages.entreprises;
 
 import ma.inpt.stages.common.BaseDeDonnees;
+import ma.inpt.stages.common.ComptesService;
 import ma.inpt.stages.common.Configuration;
 import ma.inpt.stages.common.Lanceur;
 import ma.inpt.stages.common.ServeurSoap;
@@ -21,6 +22,8 @@ public final class ServiceEntreprisesMain {
         BaseDeDonnees base = BaseDeDonnees.depuis(config, "entreprises");
         VerificateurSante sante = new VerificateurSante(NOM, base::estDisponible);
         ServeurSoap serveur = new ServeurSoap(hote, port, sante);
+        ServiceEntreprises service = new ServiceEntreprises(new EntrepriseDaoJdbc(base), new ClientOffresSoap(config));
+        serveur.publier("/ws/entreprises", new EntreprisesEndpoint(service), new ComptesService(config.valeur("soa.ws.comptes")));
         Lanceur.arretPropre(serveur, base);
         serveur.demarrer();
         Lanceur.annoncer(NOM, hote, port);

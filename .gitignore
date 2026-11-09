@@ -1,8 +1,9 @@
 # Maven
 target/
 
-# Journaux d'exécution des services
+# Journaux d'exécution des services et rapports de test
 logs/
+tests/soapui/rapports/
 
 # Fichiers locaux, à ne pas publier
 PROMPT_CLAUDE_CODE_Projet_SOA.md

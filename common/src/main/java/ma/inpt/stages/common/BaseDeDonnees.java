@@ -9,7 +9,7 @@ import java.sql.SQLException;
  * Pool de connexions d'un service vers son propre schéma MySQL.
  * Le pool démarre même si MySQL est arrêté : le service reste joignable et /health signale la panne.
  */
-public final class BaseDeDonnees implements AutoCloseable {
+public final class BaseDeDonnees implements FournisseurConnexion, AutoCloseable {
 
     private final HikariDataSource source;
 
@@ -32,6 +32,7 @@ public final class BaseDeDonnees implements AutoCloseable {
         return new BaseDeDonnees(new HikariDataSource(hikari));
     }
 
+    @Override
     public Connection connexion() throws SQLException {
         return source.getConnection();
     }

@@ -4,6 +4,6 @@
 #            .\scripts\build.ps1 test -pl common
 . "$PSScriptRoot\env.ps1"
 Use-Jdk17
-$objectifs = if ($args | Where-Object { $_ -notlike '-*' }) { @() } else { @('clean', 'package') }
+$objectifs = if ($args.Count -gt 0 -and $args[0] -notlike '-*') { @() } else { @('clean', 'package') }
 & mvn -f "$RacineProjet\pom.xml" @objectifs @args
 exit $LASTEXITCODE

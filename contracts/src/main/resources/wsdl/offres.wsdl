@@ -1,0 +1,535 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions name="Offres"
+    targetNamespace="http://stages.inpt.ma/offres"
+    xmlns:tns="http://stages.inpt.ma/offres"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <wsdl:documentation>S3 Gestion des offres de stage : création, modification, suppression, disponibilité (R2, R3, R4), compatibilité (R3, R7) et décompte des places (R10).
+    Sécurité : chaque appel doit porter un en-tête WS-Security UsernameToken (mot de passe PasswordText).
+    Corrélation : en-tête SOAP facultatif {http://stages.inpt.ma/commun}CorrelationId.
+  </wsdl:documentation>
+
+  <wsdl:types>
+    <xs:schema targetNamespace="http://stages.inpt.ma/offres" elementFormDefault="qualified">
+
+      <xs:complexType name="Offre">
+        <xs:annotation><xs:documentation>Offre de stage.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="id" type="xs:long" minOccurs="0">
+            <xs:annotation><xs:documentation>Attribué par le service ; ignoré en entrée.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="titre" type="xs:string"/>
+          <xs:element name="description" type="xs:string"/>
+          <xs:element name="competence" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation><xs:documentation>Compétences requises : au moins une.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="dureeSemaines" type="xs:int"/>
+          <xs:element name="dateLimite" type="xs:date">
+            <xs:annotation><xs:documentation>Dernier jour pour candidater.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="nombrePlaces" type="xs:int">
+            <xs:annotation><xs:documentation>Places restantes.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="filiere" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation><xs:documentation>Filières acceptées : au moins une.</xs:documentation></xs:annotation>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="AMOA"/>
+                <xs:enumeration value="ASEDS"/>
+                <xs:enumeration value="DATA"/>
+                <xs:enumeration value="SESNum"/>
+                <xs:enumeration value="ICCN"/>
+                <xs:enumeration value="Cloud"/>
+                <xs:enumeration value="Smart ICT"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="niveauMinimum">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="1A"/>
+                <xs:enumeration value="2A"/>
+                <xs:enumeration value="3A"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="ville" type="xs:string"/>
+          <xs:element name="entrepriseId" type="xs:long"/>
+          <xs:element name="statut" minOccurs="0">
+            <xs:annotation><xs:documentation>BROUILLON par défaut à la création.</xs:documentation></xs:annotation>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="BROUILLON"/>
+                <xs:enumeration value="ACTIVE"/>
+                <xs:enumeration value="POURVUE"/>
+                <xs:enumeration value="CLOTUREE"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="FiltreOffres">
+        <xs:annotation><xs:documentation>Critères facultatifs, combinés entre eux.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="statut" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="BROUILLON"/>
+                <xs:enumeration value="ACTIVE"/>
+                <xs:enumeration value="POURVUE"/>
+                <xs:enumeration value="CLOTUREE"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="ville" type="xs:string" minOccurs="0"/>
+          <xs:element name="filiere" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="AMOA"/>
+                <xs:enumeration value="ASEDS"/>
+                <xs:enumeration value="DATA"/>
+                <xs:enumeration value="SESNum"/>
+                <xs:enumeration value="ICCN"/>
+                <xs:enumeration value="Cloud"/>
+                <xs:enumeration value="Smart ICT"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="niveau" minOccurs="0">
+            <xs:annotation><xs:documentation>Offres accessibles à ce niveau.</xs:documentation></xs:annotation>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="1A"/>
+                <xs:enumeration value="2A"/>
+                <xs:enumeration value="3A"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="entrepriseId" type="xs:long" minOccurs="0"/>
+          <xs:element name="competence" type="xs:string" minOccurs="0"/>
+          <xs:element name="recherche" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>Partie du titre ou de la description.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="ouvertesSeulement" type="xs:boolean" minOccurs="0">
+            <xs:annotation><xs:documentation>Actives, avant la date limite, avec au moins une place.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Disponibilite">
+        <xs:annotation><xs:documentation>Résultat de verifierDisponibilite.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="existe" type="xs:boolean"/>
+          <xs:element name="active" type="xs:boolean"/>
+          <xs:element name="dateLimiteRespectee" type="xs:boolean"/>
+          <xs:element name="placesDisponibles" type="xs:boolean"/>
+          <xs:element name="nombrePlaces" type="xs:int" minOccurs="0"/>
+          <xs:element name="disponible" type="xs:boolean">
+            <xs:annotation><xs:documentation>Vrai si les trois conditions sont réunies.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="regle" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>R2, R3 ou R4 si indisponible.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="motif" type="xs:string" minOccurs="0"/>
+          <xs:element name="entrepriseId" type="xs:long" minOccurs="0"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Compatibilite">
+        <xs:annotation><xs:documentation>Résultat de verifierCompatibilite.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="compatible" type="xs:boolean">
+            <xs:annotation><xs:documentation>Filière, niveau et date limite respectés.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="filiereAcceptee" type="xs:boolean"/>
+          <xs:element name="niveauSuffisant" type="xs:boolean"/>
+          <xs:element name="dateLimiteRespectee" type="xs:boolean"/>
+          <xs:element name="scoreCompetences" type="xs:int">
+            <xs:annotation><xs:documentation>De 0 à 100, indicatif : il ne bloque jamais une candidature (R7).</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="regle" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>R7 ou R3 si incompatible.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="motif" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Erreur">
+        <xs:annotation><xs:documentation>Détail porté par toutes les fautes.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="code" type="xs:string">
+            <xs:annotation><xs:documentation>Code stable, exploitable par un programme.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="message" type="xs:string">
+            <xs:annotation><xs:documentation>Message en français.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="detail" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation><xs:documentation>Précisions, par exemple chaque champ invalide.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:element name="creerOffre">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offre" type="tns:Offre"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="creerOffreResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offreCreee" type="tns:Offre"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="modifierOffre">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+            <xs:element name="offre" type="tns:Offre"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="modifierOffreResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offreModifiee" type="tns:Offre"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="supprimerOffre">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="supprimerOffreResponse">
+        <xs:complexType>
+          <xs:sequence/>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="consulterOffre">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="consulterOffreResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offre" type="tns:Offre"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="listerOffres">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="filtre" type="tns:FiltreOffres" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="listerOffresResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offre" type="tns:Offre" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="verifierDisponibilite">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offreId" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="verifierDisponibiliteResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="disponibilite" type="tns:Disponibilite"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="verifierCompatibilite">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offreId" type="xs:long"/>
+            <xs:element name="etudiantId" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="verifierCompatibiliteResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="compatibilite" type="tns:Compatibilite"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="decrementerPlaces">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offreId" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="decrementerPlacesResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offre" type="tns:Offre"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="offreIntrouvableFault" type="tns:Erreur"/>
+      <xs:element name="etudiantIntrouvableFault" type="tns:Erreur"/>
+      <xs:element name="donneesInvalidesFault" type="tns:Erreur"/>
+      <xs:element name="conflitFault" type="tns:Erreur"/>
+      <xs:element name="serviceIndisponibleFault" type="tns:Erreur"/>
+      <xs:element name="erreurInterneFault" type="tns:Erreur"/>
+    </xs:schema>
+  </wsdl:types>
+
+  <wsdl:message name="creerOffreRequete"><wsdl:part name="parameters" element="tns:creerOffre"/></wsdl:message>
+  <wsdl:message name="creerOffreReponse"><wsdl:part name="parameters" element="tns:creerOffreResponse"/></wsdl:message>
+  <wsdl:message name="modifierOffreRequete"><wsdl:part name="parameters" element="tns:modifierOffre"/></wsdl:message>
+  <wsdl:message name="modifierOffreReponse"><wsdl:part name="parameters" element="tns:modifierOffreResponse"/></wsdl:message>
+  <wsdl:message name="supprimerOffreRequete"><wsdl:part name="parameters" element="tns:supprimerOffre"/></wsdl:message>
+  <wsdl:message name="supprimerOffreReponse"><wsdl:part name="parameters" element="tns:supprimerOffreResponse"/></wsdl:message>
+  <wsdl:message name="consulterOffreRequete"><wsdl:part name="parameters" element="tns:consulterOffre"/></wsdl:message>
+  <wsdl:message name="consulterOffreReponse"><wsdl:part name="parameters" element="tns:consulterOffreResponse"/></wsdl:message>
+  <wsdl:message name="listerOffresRequete"><wsdl:part name="parameters" element="tns:listerOffres"/></wsdl:message>
+  <wsdl:message name="listerOffresReponse"><wsdl:part name="parameters" element="tns:listerOffresResponse"/></wsdl:message>
+  <wsdl:message name="verifierDisponibiliteRequete"><wsdl:part name="parameters" element="tns:verifierDisponibilite"/></wsdl:message>
+  <wsdl:message name="verifierDisponibiliteReponse"><wsdl:part name="parameters" element="tns:verifierDisponibiliteResponse"/></wsdl:message>
+  <wsdl:message name="verifierCompatibiliteRequete"><wsdl:part name="parameters" element="tns:verifierCompatibilite"/></wsdl:message>
+  <wsdl:message name="verifierCompatibiliteReponse"><wsdl:part name="parameters" element="tns:verifierCompatibiliteResponse"/></wsdl:message>
+  <wsdl:message name="decrementerPlacesRequete"><wsdl:part name="parameters" element="tns:decrementerPlaces"/></wsdl:message>
+  <wsdl:message name="decrementerPlacesReponse"><wsdl:part name="parameters" element="tns:decrementerPlacesResponse"/></wsdl:message>
+
+  <wsdl:message name="OffreIntrouvableFault">
+    <wsdl:documentation>Aucune offre ne correspond à l'identifiant.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:offreIntrouvableFault"/>
+  </wsdl:message>
+  <wsdl:message name="EtudiantIntrouvableFault">
+    <wsdl:documentation>Aucun étudiant ne correspond à l'identifiant.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:etudiantIntrouvableFault"/>
+  </wsdl:message>
+  <wsdl:message name="DonneesInvalidesFault">
+    <wsdl:documentation>Les données reçues sont absentes ou mal formées.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:donneesInvalidesFault"/>
+  </wsdl:message>
+  <wsdl:message name="ConflitFault">
+    <wsdl:documentation>L'opération contredit l'état actuel ou une règle de gestion.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:conflitFault"/>
+  </wsdl:message>
+  <wsdl:message name="ServiceIndisponibleFault">
+    <wsdl:documentation>La base de données ou un service dépendant ne répond pas.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:serviceIndisponibleFault"/>
+  </wsdl:message>
+  <wsdl:message name="ErreurInterneFault">
+    <wsdl:documentation>Erreur inattendue ; le détail technique reste dans les journaux.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:erreurInterneFault"/>
+  </wsdl:message>
+
+  <wsdl:portType name="OffresPortType">
+    <wsdl:operation name="creerOffre">
+      <wsdl:documentation>Crée une offre après avoir vérifié l'entreprise auprès de S2. Fautes attendues : DonneesInvalidesFault, ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:creerOffreRequete"/>
+      <wsdl:output message="tns:creerOffreReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="modifierOffre">
+      <wsdl:documentation>Remplace l'offre. Le statut suit les transitions autorisées ; l'entreprise ne change pas. Fautes attendues : OffreIntrouvableFault, DonneesInvalidesFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:modifierOffreRequete"/>
+      <wsdl:output message="tns:modifierOffreReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="supprimerOffre">
+      <wsdl:documentation>Supprime une offre en BROUILLON. Une offre publiée se clôture. Fautes attendues : OffreIntrouvableFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:supprimerOffreRequete"/>
+      <wsdl:output message="tns:supprimerOffreReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="consulterOffre">
+      <wsdl:documentation>Renvoie une offre. Fautes attendues : OffreIntrouvableFault.</wsdl:documentation>
+      <wsdl:input message="tns:consulterOffreRequete"/>
+      <wsdl:output message="tns:consulterOffreReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="listerOffres">
+      <wsdl:documentation>Liste les offres selon des critères facultatifs. Fautes attendues : DonneesInvalidesFault.</wsdl:documentation>
+      <wsdl:input message="tns:listerOffresRequete"/>
+      <wsdl:output message="tns:listerOffresReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="verifierDisponibilite">
+      <wsdl:documentation>Vérifie que l'offre est active (R2), avant sa date limite (R3) et avec une place (R4). Une offre inconnue donne existe=false, pas une faute. Fautes attendues : ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:verifierDisponibiliteRequete"/>
+      <wsdl:output message="tns:verifierDisponibiliteReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="verifierCompatibilite">
+      <wsdl:documentation>Compare l'offre au profil de l'étudiant obtenu auprès de S1 (R7, R3) et calcule le score indicatif. Fautes attendues : OffreIntrouvableFault, EtudiantIntrouvableFault, ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:verifierCompatibiliteRequete"/>
+      <wsdl:output message="tns:verifierCompatibiliteReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="decrementerPlaces">
+      <wsdl:documentation>Retire une place de façon atomique. L'offre passe en POURVUE à zéro (R10). Fautes attendues : OffreIntrouvableFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:decrementerPlacesRequete"/>
+      <wsdl:output message="tns:decrementerPlacesReponse"/>
+      <wsdl:fault name="OffreIntrouvableFault" message="tns:OffreIntrouvableFault"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="OffresBinding" type="tns:OffresPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="creerOffre">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="modifierOffre">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="supprimerOffre">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="consulterOffre">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="listerOffres">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="verifierDisponibilite">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="verifierCompatibilite">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="decrementerPlaces">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="OffreIntrouvableFault"><soap:fault name="OffreIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="OffresService">
+    <wsdl:port name="OffresPort" binding="tns:OffresBinding">
+      <soap:address location="REPLACE_WITH_ACTUAL_URL"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>

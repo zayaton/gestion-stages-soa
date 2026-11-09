@@ -20,6 +20,10 @@
       <groupId>ma.inpt.stages</groupId>
       <artifactId>common</artifactId>
     </dependency>
+    <dependency>
+      <groupId>ma.inpt.stages</groupId>
+      <artifactId>contracts</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

@@ -12,6 +12,7 @@
 
   <modules>
     <module>common</module>
+    <module>contracts</module>
     <module>soap-etudiants</module>
     <module>soap-entreprises</module>
     <module>soap-offres</module>
@@ -32,6 +33,9 @@
     <slf4j.version>2.0.16</slf4j.version>
     <logback.version>1.5.12</logback.version>
     <junit.version>5.11.3</junit.version>
+    <jaxws.version>4.0.3</jaxws.version>
+    <validator.version>8.0.1.Final</validator.version>
+    <bcrypt.version>0.10.2</bcrypt.version>
   </properties>
 
   <dependencyManagement>
@@ -54,6 +58,26 @@
         <groupId>ma.inpt.stages</groupId>
         <artifactId>common</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>ma.inpt.stages</groupId>
+        <artifactId>contracts</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.xml.ws</groupId>
+        <artifactId>jaxws-rt</artifactId>
+        <version>${jaxws.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hibernate.validator</groupId>
+        <artifactId>hibernate-validator</artifactId>
+        <version>${validator.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>at.favre.lib</groupId>
+        <artifactId>bcrypt</artifactId>
+        <version>${bcrypt.version}</version>
       </dependency>
       <dependency>
         <groupId>com.zaxxer</groupId>
@@ -104,6 +128,23 @@
                 </requireJavaVersion>
               </rules>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Tests *IT : ils exigent MySQL, donc tournent seulement avec « verify ». -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.5.2</version>
+        <configuration>
+          <argLine>-Dfile.encoding=UTF-8</argLine>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>

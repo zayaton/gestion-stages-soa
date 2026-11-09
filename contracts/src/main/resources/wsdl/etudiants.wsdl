@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions name="Etudiants"
+    targetNamespace="http://stages.inpt.ma/etudiants"
+    xmlns:tns="http://stages.inpt.ma/etudiants"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <wsdl:documentation>S1 Gestion des étudiants : création, consultation, modification, suppression et vérification (règle R1).
+    Sécurité : chaque appel doit porter un en-tête WS-Security UsernameToken (mot de passe PasswordText).
+    Corrélation : en-tête SOAP facultatif {http://stages.inpt.ma/commun}CorrelationId.
+  </wsdl:documentation>
+
+  <wsdl:types>
+    <xs:schema targetNamespace="http://stages.inpt.ma/etudiants" elementFormDefault="qualified">
+
+      <xs:complexType name="Etudiant">
+        <xs:annotation><xs:documentation>Profil d'un étudiant.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="id" type="xs:long" minOccurs="0">
+            <xs:annotation><xs:documentation>Attribué par le service ; ignoré en entrée.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="matricule" type="xs:string">
+            <xs:annotation><xs:documentation>Unique, au format INPT-AAAA-NNNN.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="nom" type="xs:string"/>
+          <xs:element name="prenom" type="xs:string"/>
+          <xs:element name="filiere">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="AMOA"/>
+                <xs:enumeration value="ASEDS"/>
+                <xs:enumeration value="DATA"/>
+                <xs:enumeration value="SESNum"/>
+                <xs:enumeration value="ICCN"/>
+                <xs:enumeration value="Cloud"/>
+                <xs:enumeration value="Smart ICT"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="niveau">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="1A"/>
+                <xs:enumeration value="2A"/>
+                <xs:enumeration value="3A"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="email" type="xs:string">
+            <xs:annotation><xs:documentation>Unique.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="telephone" type="xs:string">
+            <xs:annotation><xs:documentation>Dix chiffres, par exemple 0612345678.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="ville" type="xs:string"/>
+          <xs:element name="statut" minOccurs="0">
+            <xs:annotation><xs:documentation>ACTIF par défaut à la création.</xs:documentation></xs:annotation>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="ACTIF"/>
+                <xs:enumeration value="SUSPENDU"/>
+                <xs:enumeration value="EN_STAGE"/>
+                <xs:enumeration value="DIPLOME"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="competence" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation><xs:documentation>Compétences déclarées : base du score indicatif de S3.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="FiltreEtudiants">
+        <xs:annotation><xs:documentation>Critères facultatifs, combinés entre eux.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="filiere" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="AMOA"/>
+                <xs:enumeration value="ASEDS"/>
+                <xs:enumeration value="DATA"/>
+                <xs:enumeration value="SESNum"/>
+                <xs:enumeration value="ICCN"/>
+                <xs:enumeration value="Cloud"/>
+                <xs:enumeration value="Smart ICT"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="niveau" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="1A"/>
+                <xs:enumeration value="2A"/>
+                <xs:enumeration value="3A"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="statut" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="ACTIF"/>
+                <xs:enumeration value="SUSPENDU"/>
+                <xs:enumeration value="EN_STAGE"/>
+                <xs:enumeration value="DIPLOME"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="ville" type="xs:string" minOccurs="0"/>
+          <xs:element name="recherche" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>Partie du nom, du prénom ou du matricule.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="VerificationEtudiant">
+        <xs:annotation><xs:documentation>Résultat de verifierEtudiant.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="existe" type="xs:boolean"/>
+          <xs:element name="statut" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="ACTIF"/>
+                <xs:enumeration value="SUSPENDU"/>
+                <xs:enumeration value="EN_STAGE"/>
+                <xs:enumeration value="DIPLOME"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="eligible" type="xs:boolean">
+            <xs:annotation><xs:documentation>Vrai si le statut est ACTIF (règle R1).</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="regle" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>R1 si non éligible.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="motif" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>Raison en français si non éligible.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="nomComplet" type="xs:string" minOccurs="0"/>
+          <xs:element name="email" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Erreur">
+        <xs:annotation><xs:documentation>Détail porté par toutes les fautes.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="code" type="xs:string">
+            <xs:annotation><xs:documentation>Code stable, exploitable par un programme.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="message" type="xs:string">
+            <xs:annotation><xs:documentation>Message en français.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="detail" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation><xs:documentation>Précisions, par exemple chaque champ invalide.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:element name="ajouterEtudiant">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="etudiant" type="tns:Etudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ajouterEtudiantResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="etudiantCree" type="tns:Etudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="consulterEtudiant">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="consulterEtudiantResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="etudiant" type="tns:Etudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="listerEtudiants">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="filtre" type="tns:FiltreEtudiants" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="listerEtudiantsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="etudiant" type="tns:Etudiant" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="modifierEtudiant">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+            <xs:element name="etudiant" type="tns:Etudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="modifierEtudiantResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="etudiantModifie" type="tns:Etudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="supprimerEtudiant">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="supprimerEtudiantResponse">
+        <xs:complexType>
+          <xs:sequence/>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="verifierEtudiant">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="verifierEtudiantResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="verification" type="tns:VerificationEtudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="changerStatutEtudiant">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+            <xs:element name="statut">
+              <xs:simpleType>
+                <xs:restriction base="xs:string">
+                  <xs:enumeration value="ACTIF"/>
+                  <xs:enumeration value="SUSPENDU"/>
+                  <xs:enumeration value="EN_STAGE"/>
+                  <xs:enumeration value="DIPLOME"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="changerStatutEtudiantResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="etudiant" type="tns:Etudiant"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="etudiantIntrouvableFault" type="tns:Erreur"/>
+      <xs:element name="donneesInvalidesFault" type="tns:Erreur"/>
+      <xs:element name="conflitFault" type="tns:Erreur"/>
+      <xs:element name="serviceIndisponibleFault" type="tns:Erreur"/>
+      <xs:element name="erreurInterneFault" type="tns:Erreur"/>
+    </xs:schema>
+  </wsdl:types>
+
+  <wsdl:message name="ajouterEtudiantRequete"><wsdl:part name="parameters" element="tns:ajouterEtudiant"/></wsdl:message>
+  <wsdl:message name="ajouterEtudiantReponse"><wsdl:part name="parameters" element="tns:ajouterEtudiantResponse"/></wsdl:message>
+  <wsdl:message name="consulterEtudiantRequete"><wsdl:part name="parameters" element="tns:consulterEtudiant"/></wsdl:message>
+  <wsdl:message name="consulterEtudiantReponse"><wsdl:part name="parameters" element="tns:consulterEtudiantResponse"/></wsdl:message>
+  <wsdl:message name="listerEtudiantsRequete"><wsdl:part name="parameters" element="tns:listerEtudiants"/></wsdl:message>
+  <wsdl:message name="listerEtudiantsReponse"><wsdl:part name="parameters" element="tns:listerEtudiantsResponse"/></wsdl:message>
+  <wsdl:message name="modifierEtudiantRequete"><wsdl:part name="parameters" element="tns:modifierEtudiant"/></wsdl:message>
+  <wsdl:message name="modifierEtudiantReponse"><wsdl:part name="parameters" element="tns:modifierEtudiantResponse"/></wsdl:message>
+  <wsdl:message name="supprimerEtudiantRequete"><wsdl:part name="parameters" element="tns:supprimerEtudiant"/></wsdl:message>
+  <wsdl:message name="supprimerEtudiantReponse"><wsdl:part name="parameters" element="tns:supprimerEtudiantResponse"/></wsdl:message>
+  <wsdl:message name="verifierEtudiantRequete"><wsdl:part name="parameters" element="tns:verifierEtudiant"/></wsdl:message>
+  <wsdl:message name="verifierEtudiantReponse"><wsdl:part name="parameters" element="tns:verifierEtudiantResponse"/></wsdl:message>
+  <wsdl:message name="changerStatutEtudiantRequete"><wsdl:part name="parameters" element="tns:changerStatutEtudiant"/></wsdl:message>
+  <wsdl:message name="changerStatutEtudiantReponse"><wsdl:part name="parameters" element="tns:changerStatutEtudiantResponse"/></wsdl:message>
+
+  <wsdl:message name="EtudiantIntrouvableFault">
+    <wsdl:documentation>Aucun étudiant ne correspond à l'identifiant.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:etudiantIntrouvableFault"/>
+  </wsdl:message>
+  <wsdl:message name="DonneesInvalidesFault">
+    <wsdl:documentation>Les données reçues sont absentes ou mal formées.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:donneesInvalidesFault"/>
+  </wsdl:message>
+  <wsdl:message name="ConflitFault">
+    <wsdl:documentation>L'opération contredit l'état actuel ou une règle de gestion.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:conflitFault"/>
+  </wsdl:message>
+  <wsdl:message name="ServiceIndisponibleFault">
+    <wsdl:documentation>La base de données ou un service dépendant ne répond pas.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:serviceIndisponibleFault"/>
+  </wsdl:message>
+  <wsdl:message name="ErreurInterneFault">
+    <wsdl:documentation>Erreur inattendue ; le détail technique reste dans les journaux.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:erreurInterneFault"/>
+  </wsdl:message>
+
+  <wsdl:portType name="EtudiantsPortType">
+    <wsdl:operation name="ajouterEtudiant">
+      <wsdl:documentation>Crée un étudiant. Fautes attendues : DonneesInvalidesFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:ajouterEtudiantRequete"/>
+      <wsdl:output message="tns:ajouterEtudiantReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="consulterEtudiant">
+      <wsdl:documentation>Renvoie le profil d'un étudiant. Fautes attendues : EtudiantIntrouvableFault.</wsdl:documentation>
+      <wsdl:input message="tns:consulterEtudiantRequete"/>
+      <wsdl:output message="tns:consulterEtudiantReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="listerEtudiants">
+      <wsdl:documentation>Liste les étudiants selon des critères facultatifs. Fautes attendues : DonneesInvalidesFault.</wsdl:documentation>
+      <wsdl:input message="tns:listerEtudiantsRequete"/>
+      <wsdl:output message="tns:listerEtudiantsReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="modifierEtudiant">
+      <wsdl:documentation>Remplace le profil. Un changement de statut suit les mêmes règles que changerStatutEtudiant. Fautes attendues : EtudiantIntrouvableFault, DonneesInvalidesFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:modifierEtudiantRequete"/>
+      <wsdl:output message="tns:modifierEtudiantReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="supprimerEtudiant">
+      <wsdl:documentation>Supprime un étudiant, sauf pendant un stage. Fautes attendues : EtudiantIntrouvableFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:supprimerEtudiantRequete"/>
+      <wsdl:output message="tns:supprimerEtudiantReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="verifierEtudiant">
+      <wsdl:documentation>Indique si l'étudiant existe, son statut et s'il peut candidater (R1). Un étudiant inconnu donne existe=false, pas une faute. Fautes attendues : ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:verifierEtudiantRequete"/>
+      <wsdl:output message="tns:verifierEtudiantReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="changerStatutEtudiant">
+      <wsdl:documentation>Change le statut selon les transitions autorisées. Fautes attendues : EtudiantIntrouvableFault, DonneesInvalidesFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:changerStatutEtudiantRequete"/>
+      <wsdl:output message="tns:changerStatutEtudiantReponse"/>
+      <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="EtudiantsBinding" type="tns:EtudiantsPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="ajouterEtudiant">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="consulterEtudiant">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="listerEtudiants">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="modifierEtudiant">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="supprimerEtudiant">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="verifierEtudiant">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="changerStatutEtudiant">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EtudiantIntrouvableFault"><soap:fault name="EtudiantIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="EtudiantsService">
+    <wsdl:port name="EtudiantsPort" binding="tns:EtudiantsBinding">
+      <soap:address location="REPLACE_WITH_ACTUAL_URL"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>

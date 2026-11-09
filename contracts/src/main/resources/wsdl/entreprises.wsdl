@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions name="Entreprises"
+    targetNamespace="http://stages.inpt.ma/entreprises"
+    xmlns:tns="http://stages.inpt.ma/entreprises"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <wsdl:documentation>S2 Gestion des entreprises partenaires : création, consultation, modification, suppression, vérification (règle R2) et consultation de leurs offres.
+    Sécurité : chaque appel doit porter un en-tête WS-Security UsernameToken (mot de passe PasswordText).
+    Corrélation : en-tête SOAP facultatif {http://stages.inpt.ma/commun}CorrelationId.
+  </wsdl:documentation>
+
+  <wsdl:types>
+    <xs:schema targetNamespace="http://stages.inpt.ma/entreprises" elementFormDefault="qualified">
+
+      <xs:complexType name="ResponsableContact">
+        <xs:annotation><xs:documentation>Responsable de contact.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="nom" type="xs:string"/>
+          <xs:element name="fonction" type="xs:string"/>
+          <xs:element name="email" type="xs:string"/>
+          <xs:element name="telephone" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Entreprise">
+        <xs:annotation><xs:documentation>Entreprise partenaire.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="id" type="xs:long" minOccurs="0">
+            <xs:annotation><xs:documentation>Attribué par le service ; ignoré en entrée.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="raisonSociale" type="xs:string"/>
+          <xs:element name="ice" type="xs:string">
+            <xs:annotation><xs:documentation>Identifiant commun de 15 chiffres, unique.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="secteur" type="xs:string"/>
+          <xs:element name="adresse" type="xs:string"/>
+          <xs:element name="ville" type="xs:string"/>
+          <xs:element name="email" type="xs:string">
+            <xs:annotation><xs:documentation>Unique.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="telephone" type="xs:string"/>
+          <xs:element name="responsable" type="tns:ResponsableContact"/>
+          <xs:element name="statut" minOccurs="0">
+            <xs:annotation><xs:documentation>ACTIVE par défaut à la création.</xs:documentation></xs:annotation>
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="ACTIVE"/>
+                <xs:enumeration value="INACTIVE"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="FiltreEntreprises">
+        <xs:annotation><xs:documentation>Critères facultatifs, combinés entre eux.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="secteur" type="xs:string" minOccurs="0"/>
+          <xs:element name="ville" type="xs:string" minOccurs="0"/>
+          <xs:element name="statut" minOccurs="0">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="ACTIVE"/>
+                <xs:enumeration value="INACTIVE"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="recherche" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>Partie de la raison sociale.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="VerificationEntreprise">
+        <xs:annotation><xs:documentation>Résultat de verifierEntreprise.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="referencee" type="xs:boolean"/>
+          <xs:element name="active" type="xs:boolean"/>
+          <xs:element name="regle" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>R2 si non référencée ou inactive.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="motif" type="xs:string" minOccurs="0"/>
+          <xs:element name="raisonSociale" type="xs:string" minOccurs="0"/>
+          <xs:element name="email" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="OffreResume">
+        <xs:annotation><xs:documentation>Résumé d'une offre, fourni par le service S3.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="id" type="xs:long"/>
+          <xs:element name="titre" type="xs:string"/>
+          <xs:element name="statut">
+            <xs:simpleType>
+              <xs:restriction base="xs:string">
+                <xs:enumeration value="BROUILLON"/>
+                <xs:enumeration value="ACTIVE"/>
+                <xs:enumeration value="POURVUE"/>
+                <xs:enumeration value="CLOTUREE"/>
+              </xs:restriction>
+            </xs:simpleType>
+          </xs:element>
+          <xs:element name="dateLimite" type="xs:date"/>
+          <xs:element name="nombrePlaces" type="xs:int"/>
+          <xs:element name="ville" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:complexType name="Erreur">
+        <xs:annotation><xs:documentation>Détail porté par toutes les fautes.</xs:documentation></xs:annotation>
+        <xs:sequence>
+          <xs:element name="code" type="xs:string">
+            <xs:annotation><xs:documentation>Code stable, exploitable par un programme.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="message" type="xs:string">
+            <xs:annotation><xs:documentation>Message en français.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="detail" type="xs:string" minOccurs="0" maxOccurs="unbounded">
+            <xs:annotation><xs:documentation>Précisions, par exemple chaque champ invalide.</xs:documentation></xs:annotation>
+          </xs:element>
+        </xs:sequence>
+      </xs:complexType>
+
+      <xs:element name="ajouterEntreprise">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entreprise" type="tns:Entreprise"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="ajouterEntrepriseResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entrepriseCreee" type="tns:Entreprise"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="consulterEntreprise">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="consulterEntrepriseResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entreprise" type="tns:Entreprise"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="listerEntreprises">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="filtre" type="tns:FiltreEntreprises" minOccurs="0"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="listerEntreprisesResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entreprise" type="tns:Entreprise" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="modifierEntreprise">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+            <xs:element name="entreprise" type="tns:Entreprise"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="modifierEntrepriseResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="entrepriseModifiee" type="tns:Entreprise"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="supprimerEntreprise">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="supprimerEntrepriseResponse">
+        <xs:complexType>
+          <xs:sequence/>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="verifierEntreprise">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="verifierEntrepriseResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="verification" type="tns:VerificationEntreprise"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="consulterOffresEntreprise">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="id" type="xs:long"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="consulterOffresEntrepriseResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="offre" type="tns:OffreResume" minOccurs="0" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+
+      <xs:element name="entrepriseIntrouvableFault" type="tns:Erreur"/>
+      <xs:element name="donneesInvalidesFault" type="tns:Erreur"/>
+      <xs:element name="conflitFault" type="tns:Erreur"/>
+      <xs:element name="serviceIndisponibleFault" type="tns:Erreur"/>
+      <xs:element name="erreurInterneFault" type="tns:Erreur"/>
+    </xs:schema>
+  </wsdl:types>
+
+  <wsdl:message name="ajouterEntrepriseRequete"><wsdl:part name="parameters" element="tns:ajouterEntreprise"/></wsdl:message>
+  <wsdl:message name="ajouterEntrepriseReponse"><wsdl:part name="parameters" element="tns:ajouterEntrepriseResponse"/></wsdl:message>
+  <wsdl:message name="consulterEntrepriseRequete"><wsdl:part name="parameters" element="tns:consulterEntreprise"/></wsdl:message>
+  <wsdl:message name="consulterEntrepriseReponse"><wsdl:part name="parameters" element="tns:consulterEntrepriseResponse"/></wsdl:message>
+  <wsdl:message name="listerEntreprisesRequete"><wsdl:part name="parameters" element="tns:listerEntreprises"/></wsdl:message>
+  <wsdl:message name="listerEntreprisesReponse"><wsdl:part name="parameters" element="tns:listerEntreprisesResponse"/></wsdl:message>
+  <wsdl:message name="modifierEntrepriseRequete"><wsdl:part name="parameters" element="tns:modifierEntreprise"/></wsdl:message>
+  <wsdl:message name="modifierEntrepriseReponse"><wsdl:part name="parameters" element="tns:modifierEntrepriseResponse"/></wsdl:message>
+  <wsdl:message name="supprimerEntrepriseRequete"><wsdl:part name="parameters" element="tns:supprimerEntreprise"/></wsdl:message>
+  <wsdl:message name="supprimerEntrepriseReponse"><wsdl:part name="parameters" element="tns:supprimerEntrepriseResponse"/></wsdl:message>
+  <wsdl:message name="verifierEntrepriseRequete"><wsdl:part name="parameters" element="tns:verifierEntreprise"/></wsdl:message>
+  <wsdl:message name="verifierEntrepriseReponse"><wsdl:part name="parameters" element="tns:verifierEntrepriseResponse"/></wsdl:message>
+  <wsdl:message name="consulterOffresEntrepriseRequete"><wsdl:part name="parameters" element="tns:consulterOffresEntreprise"/></wsdl:message>
+  <wsdl:message name="consulterOffresEntrepriseReponse"><wsdl:part name="parameters" element="tns:consulterOffresEntrepriseResponse"/></wsdl:message>
+
+  <wsdl:message name="EntrepriseIntrouvableFault">
+    <wsdl:documentation>Aucune entreprise ne correspond à l'identifiant.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:entrepriseIntrouvableFault"/>
+  </wsdl:message>
+  <wsdl:message name="DonneesInvalidesFault">
+    <wsdl:documentation>Les données reçues sont absentes ou mal formées.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:donneesInvalidesFault"/>
+  </wsdl:message>
+  <wsdl:message name="ConflitFault">
+    <wsdl:documentation>L'opération contredit l'état actuel ou une règle de gestion.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:conflitFault"/>
+  </wsdl:message>
+  <wsdl:message name="ServiceIndisponibleFault">
+    <wsdl:documentation>La base de données ou un service dépendant ne répond pas.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:serviceIndisponibleFault"/>
+  </wsdl:message>
+  <wsdl:message name="ErreurInterneFault">
+    <wsdl:documentation>Erreur inattendue ; le détail technique reste dans les journaux.</wsdl:documentation>
+    <wsdl:part name="fault" element="tns:erreurInterneFault"/>
+  </wsdl:message>
+
+  <wsdl:portType name="EntreprisesPortType">
+    <wsdl:operation name="ajouterEntreprise">
+      <wsdl:documentation>Crée une entreprise. Fautes attendues : DonneesInvalidesFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:ajouterEntrepriseRequete"/>
+      <wsdl:output message="tns:ajouterEntrepriseReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="consulterEntreprise">
+      <wsdl:documentation>Renvoie une entreprise. Fautes attendues : EntrepriseIntrouvableFault.</wsdl:documentation>
+      <wsdl:input message="tns:consulterEntrepriseRequete"/>
+      <wsdl:output message="tns:consulterEntrepriseReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="listerEntreprises">
+      <wsdl:documentation>Liste les entreprises selon des critères facultatifs. Fautes attendues : DonneesInvalidesFault.</wsdl:documentation>
+      <wsdl:input message="tns:listerEntreprisesRequete"/>
+      <wsdl:output message="tns:listerEntreprisesReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="modifierEntreprise">
+      <wsdl:documentation>Remplace les informations, statut compris. Fautes attendues : EntrepriseIntrouvableFault, DonneesInvalidesFault, ConflitFault.</wsdl:documentation>
+      <wsdl:input message="tns:modifierEntrepriseRequete"/>
+      <wsdl:output message="tns:modifierEntrepriseReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="supprimerEntreprise">
+      <wsdl:documentation>Supprime une entreprise sans offre. Interroge S3. Fautes attendues : EntrepriseIntrouvableFault, ConflitFault, ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:supprimerEntrepriseRequete"/>
+      <wsdl:output message="tns:supprimerEntrepriseReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="verifierEntreprise">
+      <wsdl:documentation>Indique si l'entreprise est référencée et active (R2). Une entreprise inconnue donne referencee=false, pas une faute. Fautes attendues : ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:verifierEntrepriseRequete"/>
+      <wsdl:output message="tns:verifierEntrepriseReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+    <wsdl:operation name="consulterOffresEntreprise">
+      <wsdl:documentation>Liste les offres de l'entreprise en appelant S3. Fautes attendues : EntrepriseIntrouvableFault, ServiceIndisponibleFault.</wsdl:documentation>
+      <wsdl:input message="tns:consulterOffresEntrepriseRequete"/>
+      <wsdl:output message="tns:consulterOffresEntrepriseReponse"/>
+      <wsdl:fault name="EntrepriseIntrouvableFault" message="tns:EntrepriseIntrouvableFault"/>
+      <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+      <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+      <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+      <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="EntreprisesBinding" type="tns:EntreprisesPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="ajouterEntreprise">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="consulterEntreprise">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="listerEntreprises">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="modifierEntreprise">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="supprimerEntreprise">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="verifierEntreprise">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="consulterOffresEntreprise">
+      <soap:operation soapAction=""/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+      <wsdl:fault name="EntrepriseIntrouvableFault"><soap:fault name="EntrepriseIntrouvableFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="DonneesInvalidesFault"><soap:fault name="DonneesInvalidesFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ConflitFault"><soap:fault name="ConflitFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ServiceIndisponibleFault"><soap:fault name="ServiceIndisponibleFault" use="literal"/></wsdl:fault>
+      <wsdl:fault name="ErreurInterneFault"><soap:fault name="ErreurInterneFault" use="literal"/></wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="EntreprisesService">
+    <wsdl:port name="EntreprisesPort" binding="tns:EntreprisesBinding">
+      <soap:address location="REPLACE_WITH_ACTUAL_URL"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ma.inpt.stages</groupId>
+    <artifactId>soa-stages-parent</artifactId>
+    <version>1.0.0</version>
+  </parent>
+  <artifactId>contracts</artifactId>
+  <name>Contrats WSDL et classes générées</name>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.sun.xml.ws</groupId>
+      <artifactId>jaxws-rt</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Génère les classes depuis les WSDL du dépôt : aucun service n'a besoin de tourner pour construire. -->
+      <plugin>
+        <groupId>com.sun.xml.ws</groupId>
+        <artifactId>jaxws-maven-plugin</artifactId>
+        <version>${jaxws.version}</version>
+        <configuration>
+          <wsdlDirectory>${project.basedir}/src/main/resources/wsdl</wsdlDirectory>
+          <keep>true</keep>
+          <encoding>UTF-8</encoding>
+        </configuration>
+        <executions>
+          <execution>
+            <id>etudiants</id>
+            <goals><goal>wsimport</goal></goals>
+            <configuration>
+              <wsdlFiles><wsdlFile>etudiants.wsdl</wsdlFile></wsdlFiles>
+              <wsdlLocation>/wsdl/etudiants.wsdl</wsdlLocation>
+              <packageName>ma.inpt.stages.contrats.etudiants</packageName>
+              <staleFile>${project.build.directory}/jaxws/stale/etudiants.stale</staleFile>
+            </configuration>
+          </execution>
+          <execution>
+            <id>entreprises</id>
+            <goals><goal>wsimport</goal></goals>
+            <configuration>
+              <wsdlFiles><wsdlFile>entreprises.wsdl</wsdlFile></wsdlFiles>
+              <wsdlLocation>/wsdl/entreprises.wsdl</wsdlLocation>
+              <packageName>ma.inpt.stages.contrats.entreprises</packageName>
+              <staleFile>${project.build.directory}/jaxws/stale/entreprises.stale</staleFile>
+            </configuration>
+          </execution>
+          <execution>
+            <id>offres</id>
+            <goals><goal>wsimport</goal></goals>
+            <configuration>
+              <wsdlFiles><wsdlFile>offres.wsdl</wsdlFile></wsdlFiles>
+              <wsdlLocation>/wsdl/offres.wsdl</wsdlLocation>
+              <packageName>ma.inpt.stages.contrats.offres</packageName>
+              <staleFile>${project.build.directory}/jaxws/stale/offres.stale</staleFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

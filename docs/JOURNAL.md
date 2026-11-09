@@ -34,3 +34,43 @@
 ### Limites connues
 - Les candidatures en cours issues des données de démonstration n'ont pas de cas Bonita. En mode `bonita`, seules les candidatures déposées pendant la démonstration passent par une tâche humaine. À traiter en phases 4 et 5.
 - Les mots de passe de démonstration figurent dans `soa-defaults.properties` et `docker-compose.yml` comme valeurs par défaut locales. Ils sont surchargeables par variable d'environnement. En production, ils viendraient d'un coffre à secrets.
+
+## Phase 2 – Services SOAP S1, S2, S3
+
+### Réalisé
+- Contrats écrits d'abord : `etudiants.wsdl`, `entreprises.wsdl`, `offres.wsdl`, avec espaces de noms explicites, opérations documentées et fautes typées. Le WSDL publié est le fichier du dépôt.
+- Module Maven `contracts`, ajouté à la liste initiale : il génère les classes depuis les WSDL. Une construction n'a donc besoin d'aucun service démarré.
+- Fautes : `XIntrouvableFault`, `DonneesInvalidesFault`, `ConflitFault`, `ServiceIndisponibleFault`, `ErreurInterneFault`, chacune avec un code et un message en français.
+- WS-Security UsernameToken par `SOAPHandler` sur chaque service. Comptes de service en configuration, mots de passe hachés en BCrypt.
+- Corrélation : en-tête SOAP `CorrelationId` et en-tête HTTP `X-Correlation-Id`, repris dans chaque ligne de journal et transmis aux appels suivants.
+- Tests : JUnit (règles et échanges SOAP sans base), tests `*IT` sur le vrai MySQL, projet SoapUI.
+
+### Décisions
+- **Règles de statut.** L'énoncé ne fixe que les statuts eux-mêmes. Transitions retenues pour les étudiants : `ACTIF` vers `SUSPENDU`, `EN_STAGE` ou `DIPLOME` ; `SUSPENDU` vers `ACTIF` ; `EN_STAGE` vers `ACTIF` ou `DIPLOME` ; `DIPLOME` est définitif. Pour les offres : `BROUILLON` vers `ACTIVE` ou `CLOTUREE` ; `ACTIVE` vers `POURVUE` ou `CLOTUREE` ; `POURVUE` vers `ACTIVE` ou `CLOTUREE` ; `CLOTUREE` est définitif. Reprendre le même statut est sans effet, pour qu'une étape du processus puisse être relancée.
+- **Suppression.** Un étudiant en stage ne se supprime pas. Une entreprise avec des offres ne se supprime pas (S2 interroge S3) : elle passe en `INACTIVE`. Seule une offre en `BROUILLON` se supprime : une offre publiée se clôture, ce qui conserve l'historique.
+- **`verifierX` répond sans faute pour un identifiant inconnu** (`existe=false`). Le processus BPMN peut ainsi traiter ce cas à sa passerelle de décision, comme les autres rejets.
+- **Création d'une offre contrôlée auprès de S2** : une offre ne peut pas être créée pour une entreprise inconnue ou inactive (R2).
+- **Énumérations anonymes dans les WSDL.** JAXB les lie à `String`. Avec une énumération nommée, il transformerait une valeur inconnue en `null` sans le signaler, et `<statut>INVENTE</statut>` passerait pour un statut absent.
+- **Éléments de réponse distincts de ceux de la requête** (`etudiantCree`, `etudiantModifie`, …). Avec le même nom, wsimport génère des paramètres `Holder` difficiles à utiliser.
+- **Mot de passe en clair (PasswordText) dans le jeton.** Avec des hachages BCrypt stockés, le serveur ne peut pas vérifier un PasswordDigest. Sans HTTPS en local, ce mot de passe circule en clair : TLS est indispensable en production (voir le rapport).
+
+### Points techniques à retenir
+- **JAX-WS parcourt la chaîne de gestionnaires à l'envers en entrée** : pour que la corrélation passe avant la sécurité, elle est placée après dans la liste.
+- **Un `id` non numérique devient 0 en JAXB** : sans contrôle, le client recevait « étudiant 0 introuvable ». Un identifiant non positif donne maintenant `DonneesInvalidesFault`.
+- **Dans SoapUI, les identifiants d'assertion `SOAP Fault Assertion` et `Not SOAP Fault Assertion` sont inversés** par rapport à leur nom.
+- **Tests DAO sur MySQL : `ConnexionAnnulable`** garde chaque test dans une transaction annulée, y compris les `commit` des DAO. Seul le test de concurrence écrit réellement, puis nettoie.
+
+### Incident : `tests-soapui.ps1` bloqué (08/11, résolu le 09/11)
+- **Constat.** Lors de la vérification complète du 08/11, le script est resté bloqué une trentaine de minutes et a été arrêté à la main. Le journal d'exécution montre que la suite « Panne S3 arrêté » avait réussi (1 cas, 10 assertions, 0 échec). Le blocage se produisait juste après, au redémarrage des services qui précède « Panne S1 arrêté ».
+- **Cause.** Ce redémarrage appelait `start-all.ps1` avec `Start-Process -Wait`. Sous Windows PowerShell 5.1, `-Wait` attend aussi tous les processus lancés par l'enfant. Ici, c'était le service S3 relancé, qui ne s'arrête jamais. Reproduit le 09/11 : un enfant qui se termine en 1 s mais lance une commande de 25 s fait attendre `-Wait` 25 s, contre 1 s avec `Process.WaitForExit`.
+- **Correction.** `Invoke-ProcessusLimite` attend seulement le processus lancé, avec une durée maximale : `-DelaiSuiteSecondes` (300 s par défaut) pour chaque suite SoapUI, `-DelaiRedemarrageSecondes` (300 s) pour chaque redémarrage. Au-delà, le processus est arrêté, arborescence comprise pour SoapUI, et l'étape compte comme un échec. MySQL est relancé même si la suite « Panne base arrêtée » échoue.
+- **Vérification du garde-fou.** Avec `-DelaiSuiteSecondes 3`, les trois suites sont arrêtées et signalées en échec, le script se termine (code 1, 11 s) et aucun processus SoapUI ne reste actif.
+- **Vérification complète du 09/11** : 198 tests JUnit (dont 29 sur MySQL), 66/66 vérifications du socle, toutes les suites SoapUI réussies y compris les trois pannes réelles (98 s), et les 7 services en bonne santé à la fin.
+- **À retenir pour la suite du projet** : ne jamais utiliser `Start-Process -Wait` sur un script qui démarre des services.
+
+### Limites connues
+- **XML mal formé** : le message d'erreur vient de Metro et reste en anglais, car l'erreur survient avant nos gestionnaires. Le service reste disponible et aucune trace de pile n'est renvoyée.
+- **`ErreurInterneFault`** ne peut pas être provoquée de l'extérieur : elle est couverte par JUnit, pas par SoapUI.
+- **Suppression d'un étudiant avec des candidatures** : S1 ne peut pas le vérifier seul. Le portail devra interroger S4 avant de la proposer (phase 4).
+- **`decrementerPlaces` n'est pas idempotent** : relancer cette étape retire une seconde place. Le processus ne doit la relancer que si elle a échoué (phases 4 et 5).
+- **`tests-soapui.ps1` laisse des lignes de test en base** (une offre `POURVUE`, créée pour tester R10, ne peut pas être supprimée). Il faut relancer `reset-db.ps1` ensuite.

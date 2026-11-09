@@ -29,6 +29,20 @@
       <artifactId>logback-classic</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>at.favre.lib</groupId>
+      <artifactId>bcrypt</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.xml.ws</groupId>
+      <artifactId>jaxws-rt</artifactId>
+      <optional>true</optional>
+    </dependency>
+
     <!-- Utilisés uniquement par ServeurRest : les modules SOAP n'embarquent pas Jersey. -->
     <dependency>
       <groupId>org.glassfish.jersey.containers</groupId>

@@ -8,6 +8,7 @@ Hiba Elamdaoui, Aya Zahri, Hibatollah Ait Ahmed.
 ## Prérequis
 
 - JDK 17, Maven 3.9, Docker Desktop (Windows, avec WSL 2).
+- SoapUI Open Source pour les tests SOAP.
 
 ## Démarrage
 
@@ -42,6 +43,32 @@ Si PowerShell refuse d'exécuter les scripts :
 | Mailpit | 1025 (SMTP), 8025 (boîte mail) |
 
 Chaque service expose `GET /health`.
+
+## Services SOAP
+
+| Service | Adresse | WSDL |
+|---|---|---|
+| S1 Étudiants | `http://localhost:8081/ws/etudiants` | `http://localhost:8081/ws/etudiants?wsdl` |
+| S2 Entreprises | `http://localhost:8082/ws/entreprises` | `http://localhost:8082/ws/entreprises?wsdl` |
+| S3 Offres | `http://localhost:8083/ws/offres` | `http://localhost:8083/ws/offres?wsdl` |
+
+Les contrats font foi dans [contracts/src/main/resources/wsdl](contracts/src/main/resources/wsdl).
+Chaque appel exige un en-tête WS-Security : voir [docs/SECURITE_SOAP.md](docs/SECURITE_SOAP.md).
+
+## Tests
+
+```powershell
+.\scripts\build.ps1                # tests unitaires et échanges SOAP en mémoire, sans base de données
+.\scripts\build.ps1 clean verify   # ajoute les tests sur le vrai MySQL (données fraîches : reset-db avant)
+
+.\scripts\reset-db.ps1
+.\scripts\start-all.ps1 -Rebuild
+.\scripts\verifier-socle.ps1       # socle et données de démonstration
+.\scripts\tests-soapui.ps1         # tests SoapUI, y compris de vraies pannes (S3, S1, MySQL)
+```
+
+`tests-soapui.ps1` laisse quelques lignes de test en base : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
+Le projet SoapUI à ouvrir dans l'interface graphique est `tests\soapui\Stages-SOA-soapui-project.xml`.
 
 ## Comptes de démonstration
 
