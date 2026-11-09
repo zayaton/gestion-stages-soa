@@ -82,7 +82,19 @@ Choix au démarrage : `.\scripts\start-all.ps1 -Orchestration direct` (ou `bonit
 
 ## Portail (port 8090)
 
-Le portail sert l'interface (phase 6) et expose l'API des trois espaces sous `/api`. Il appelle les six services :
+Interface : **http://localhost:8090** (connexion avec un compte de démonstration, voir plus bas). Trois espaces :
+
+- **Étudiant** : offres ouvertes avec compatibilité du profil, candidature, suivi du dossier avec le diagramme BPMN
+  du processus (étapes passées en couleur), annulation tant que l'évaluation n'a pas commencé, courriels reçus, stage.
+- **Entreprise** : candidatures reçues (coordonnées masquées), démarrage de l'évaluation puis décision
+  (accepter, refuser, demander un complément), gestion des offres et du profil.
+- **Responsable des stages** : tableau de bord, toutes les candidatures, stages (statut, comptes rendus, évaluations),
+  référentiels étudiants et entreprises, courriels envoyés, rappels de date limite, état des services.
+
+L'interface est écrite en HTML, CSS et JavaScript sans framework (`portal-gateway/src/main/resources/public`) ;
+le diagramme est affiché par bpmn-js à partir du même fichier `.bpmn` que celui importé dans Bonita.
+
+Le portail expose l'API des trois espaces sous `/api`. Il appelle les six services :
 clients SOAP générés par wsimport depuis les WSDL du dépôt, clients REST avec la clé `portail`.
 
 - Connexion : `POST /api/auth/connexion` avec `{"identifiant": "...", "motDePasse": "..."}`. La réponse contient un jeton,
@@ -104,11 +116,15 @@ clients SOAP générés par wsimport depuis les WSDL du dépôt, clients REST av
 .\scripts\test-bout-en-bout.ps1    # par le portail : tous les scénarios, courriels Mailpit, puis une vraie panne de S3
 .\scripts\test-bout-en-bout.ps1 -Orchestration simulation   # mêmes scénarios, S4 en mode bonita face au processus simulé
 .\scripts\test-bout-en-bout.ps1 -Orchestration bonita       # mêmes scénarios face au vrai Bonita (processus déployé)
+.\scripts\captures-ui.ps1         # interface dans Microsoft Edge (Playwright) : cycle complet, erreurs de console, captures
 ```
 
 `tests-soapui.ps1`, `tests-postman.ps1` et `test-bout-en-bout.ps1` modifient les données : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
 La collection à importer dans Postman est `tests\postman\Stages-SOA.postman_collection.json`, avec l'environnement `Stages-SOA-local.postman_environment.json`. Rapport HTML de la dernière exécution : `tests\postman\rapports\rapport-newman.html`.
 Le projet SoapUI à ouvrir dans l'interface graphique est `tests\soapui\Stages-SOA-soapui-project.xml`.
+`captures-ui.ps1` réinitialise les bases, joue une candidature jusqu'à l'acceptation par l'interface, visite chaque écran
+des trois espaces et échoue à la moindre erreur dans la console du navigateur. Les captures vont dans `rapport\figures\ui-*.png`.
+Il utilise Edge, déjà installé sous Windows ; `-Chromium` télécharge et utilise Chromium à la place.
 
 ## Comptes de démonstration
 

@@ -53,6 +53,19 @@
 
   <build>
     <finalName>portal-gateway</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- Le diagramme du processus : un seul fichier, partagé avec Bonita (docs/bonita). -->
+      <resource>
+        <directory>${project.basedir}/../docs/bonita</directory>
+        <targetPath>public/bpmn</targetPath>
+        <includes>
+          <include>processus-candidature.bpmn</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

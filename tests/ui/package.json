@@ -1,0 +1,8 @@
+{
+  "name": "soa-stages-tests-ui",
+  "private": true,
+  "description": "Parcours du portail dans un vrai navigateur : erreurs de console et captures d'écran pour le rapport.",
+  "type": "module",
+  "scripts": { "captures": "node captures.mjs" },
+  "devDependencies": { "playwright": "1.48.2" }
+}

@@ -131,7 +131,11 @@ CROSS JOIN (
 INSERT INTO etape_processus (soumission_id, etape, resultat, detail, date_etape, acteur)
 SELECT h.candidature_id,
        CASE h.nouveau_statut WHEN 'EN_COURS_EVALUATION' THEN 'DEBUT_EVALUATION' WHEN 'ANNULEE' THEN 'ANNULATION' ELSE 'DECISION_ENTREPRISE' END,
-       IF(h.nouveau_statut = 'ANNULEE', 'INFO', 'OK'), h.commentaire, h.date_changement, h.acteur
+       IF(h.nouveau_statut = 'ANNULEE', 'INFO', 'OK'),
+       -- Même forme que le mode direct (« Acceptée : … », « Refusée : … ») : la vue BPMN en déduit la branche suivie.
+       CASE h.nouveau_statut WHEN 'ACCEPTEE' THEN CONCAT('Acceptée : ', h.commentaire) WHEN 'REFUSEE' THEN CONCAT('Refusée : ', h.commentaire)
+            ELSE h.commentaire END,
+       h.date_changement, h.acteur
 FROM candidature_historique h WHERE h.ancien_statut IS NOT NULL;
 
 INSERT INTO etape_processus (soumission_id, etape, resultat, detail, date_etape, acteur)

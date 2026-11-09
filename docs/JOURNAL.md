@@ -181,3 +181,37 @@ Avec S3 arrêté, S4 répondait correctement 503 `SERVICE_OFFRES_INDISPONIBLE` (
 - Le compte technique `walter.bates` démarre les cas et exécute les décisions : dans Bonita, l'auteur réel de la décision n'apparaît pas ; il est connu de S4 (`X-Acteur`).
 - Supprimer un cas Bonita à l'annulation efface son historique dans Bonita ; l'historique reste dans S4.
 
+## Phase 6 – Interface web
+
+### Réalisé
+- **Interface servie par le portail** (`portal-gateway/src/main/resources/public`) : HTML, CSS et JavaScript (modules ES) sans framework ni étape de construction. Routage par l'adresse (`#/espace/page/id`), session dans `sessionStorage`, expiration détectée (retour à la connexion avec un message).
+- **Espace étudiant** : offres ouvertes (recherche, filière, « compatibles avec mon profil », score de compétences), détail et dépôt de candidature avec le résultat du contrôle (règle et motif en cas de rejet ; en mode bonita, attente du résultat du processus), mes candidatures et soumissions non recevables, annulation tant que l'évaluation n'a pas commencé (R8), courriels reçus, stage, profil.
+- **Espace entreprise** : candidatures reçues (coordonnées masquées par le serveur), démarrage de l'évaluation puis décision avec confirmation (commentaire obligatoire pour un complément), offres (création, modification selon les transitions permises, clôture), profil.
+- **Espace responsable** : tableau de bord (indicateurs, répartitions par statut, état des six services, déclenchement des rappels), candidatures avec coordonnées complètes et reprise du suivi après une panne, stages (statut, comptes rendus, évaluations), référentiels étudiants et entreprises (création, modification, statut, suppression), recherche dans les courriels envoyés.
+- **Vue BPMN en direct** : le fichier `.bpmn` du processus (le même que dans Bonita, copié au build) affiché par bpmn-js 17 ; les étapes du journal de S4 colorent les nœuds (réalisée, rejet ou erreur, en attente) et les flux parcourus. La liste des étapes en est l'équivalent textuel.
+- **Parcours dans un vrai navigateur** (`tests/ui/captures.mjs`, `scripts/captures-ui.ps1`) : Playwright pilote Microsoft Edge, joue une candidature jusqu'à l'acceptation par l'interface, visite les 28 écrans des trois espaces, échoue sur toute erreur de console, toute réponse 5xx et tout fichier statique absent, et enregistre les captures `rapport/figures/ui-*.png`.
+
+### Décisions
+- **Charte sobre, institutionnelle** : bleu INPT `#003F8A` comme seule couleur d'accent, fond papier, filets fins, coins presque droits ; Source Serif 4 pour les titres et Public Sans pour le texte (polices libres, servies localement). Ni dégradé, ni ombre portée marquée, ni emoji. Couleurs d'état réservées aux statuts, toujours accompagnées d'un libellé.
+- **Aucune ressource externe** : polices, bpmn-js et ses styles sont dans le dépôt ; l'interface fonctionne hors ligne.
+- **Texte uniquement par `textContent`** (fonction `h()`), jamais `innerHTML` : pas d'injection possible depuis les données. Les courriels sont affichés dans une `iframe` `sandbox` sans aucun droit.
+- **Le diagramme occupe toute la largeur**, hauteur ajustée à ses proportions : en demi-colonne, les libellés des tâches étaient illisibles.
+- **Les codes renvoyés par les services** (`PLANIFIE → EN_COURS`, `CONFIRMATION_DEPOT`…) sont traduits à l'affichage par leurs libellés français.
+- **Edge plutôt que Chromium pour Playwright** : présent sur tout poste Windows 10 ou 11, rien à télécharger (le téléchargement de Chromium s'est bloqué ici) ; `-Chromium` reste possible.
+- **Le compte de connexion d'un étudiant créé par le responsable n'est pas créé automatiquement** (limite assumée, signalée dans l'interface).
+
+### Incidents et corrections
+- **Déconnexion** : le message « Vous êtes déconnecté » disparaissait, l'effacement de l'adresse relançant l'affichage de la connexion. Corrigé avec `history.replaceState` ; même cause d'un double affichage à la connexion.
+- **Décisions de démonstration** : le détail de l'étape `DECISION_ENTREPRISE` ne contenait que le commentaire de l'entreprise ; la vue BPMN colorait la branche d'acceptation pour une candidature refusée. Les données reprennent la forme du mode direct (« Refusée : … ») et la vue retombe sur le statut final.
+- **Fichier `favicon` absent** (404 relevé par le parcours) : ajouté.
+
+### Vérifications (09/11)
+- `build.ps1 clean verify` : 356 tests, dont 44 sur le vrai MySQL, tous réussis.
+- `verifier-socle.ps1` : 68/68 sur données fraîches. SoapUI : 546 assertions, 0 échec. Postman : 226/226.
+- Bout en bout : mode direct, simulation avec connecteurs, simulation en secours : tous réussis, pannes comprises.
+- `captures-ui.ps1` : 28 captures, aucune erreur de console.
+- Rappel : SoapUI et `verifier-socle.ps1` supposent des données fraîches ; joués après le parcours de l'interface sans `reset-db.ps1`, ils signalent des écarts (étudiante passée « En stage »).
+
+### Limites connues
+- Pas de version mobile travaillée : l'interface reste utilisable jusqu'à une tablette, les tableaux défilent horizontalement en dessous.
+- L'étudiant ne reçoit pas de notification en direct : les écrans se mettent à jour à la navigation.

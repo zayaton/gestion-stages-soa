@@ -174,7 +174,7 @@ public final class RessourceEtudiant {
         return Services.rest(services.notifications.get("/notifications?limite=100&destinataire=" + URLEncoder.encode(email, StandardCharsets.UTF_8)));
     }
 
-    /** Stages de l'étudiant, avec comptes rendus et évaluations. */
+    /** Stages de l'étudiant, avec comptes rendus, évaluations et historique des opérations. */
     @GET
     @Path("stages")
     public ArrayNode stages() {
@@ -185,6 +185,7 @@ public final class RessourceEtudiant {
             long stageId = s.path("id").asLong();
             stage.set("comptesRendus", Services.rest(services.suivi.get("/stages/" + stageId + "/comptes-rendus")));
             stage.set("evaluations", Services.rest(services.suivi.get("/stages/" + stageId + "/evaluations")));
+            stage.set("historique", Services.rest(services.suivi.get("/stages/" + stageId + "/historique")));
             resultat.add(stage);
         }
         return resultat;
