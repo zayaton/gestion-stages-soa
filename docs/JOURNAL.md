@@ -115,3 +115,34 @@ La première exécution de la collection Postman a échoué sur R2, R3 et R4 : S
 - **Propriété des données** : S4 ne vérifie pas que l'entreprise qui décide est celle de l'offre ; c'est le rôle de la passerelle (phase 4), qui connaît l'utilisateur connecté.
 - **Postman** : la collection se joue sur des données fraîches (le script réinitialise les bases).
 
+## Phase 4 – Portail et orchestration de bout en bout
+
+### Réalisé
+- **Portail** (port 8090) : connexion BCrypt, sessions, trois espaces (`/api/etudiant`, `/api/entreprise`, `/api/responsable`), masquage des coordonnées, composition des données de plusieurs services, état du système, service des fichiers de l'interface.
+- Clients SOAP générés depuis les WSDL du dépôt (module `contracts`, `jaxws-maven-plugin`) ; clients REST avec la clé `portail` et l'en-tête `X-Acteur` (l'auteur de chaque opération arrive dans les historiques des services).
+- **Test de bout en bout** (`scripts/test-bout-en-bout.ps1`, script Node `tests/e2e/bout-en-bout.mjs`) : tout passe par le portail avec de vraies connexions ; vérifie les courriels dans Mailpit et la corrélation dans les journaux, puis arrête S3 pour de vrai.
+
+### Décisions
+- **Jeton de session aléatoire (256 bits)**, envoyé dans `Authorization: Bearer`. Seule son empreinte SHA-256 est en base. Un en-tête plutôt qu'un cookie : pas d'attaque CSRF possible ; en contrepartie, l'interface doit éviter toute faille XSS (pas de `innerHTML` avec des données).
+- **Même message pour tous les refus de connexion** (mauvais mot de passe, compte inconnu, compte désactivé), et vérification BCrypt même pour un compte inconnu : ni le message ni le temps de réponse ne révèlent quels identifiants existent.
+- **L'identité vient toujours de la session**, jamais du navigateur : un étudiant ne peut candidater que pour lui-même, une entreprise ne publie que pour elle.
+- **Le dossier d'un autre donne 404, pas 403** : on ne révèle pas son existence.
+- **Masquage côté serveur** : le JSON envoyé à l'entreprise ne contient jamais les coordonnées complètes (vérifié par le test de bout en bout).
+- **Les erreurs des services sont transmises telles quelles** (code, message, détails) : l'interface affiche par exemple le message exact de la règle R8.
+- **Suppression d'un étudiant** : le portail interroge S4 et refuse (409) si l'étudiant a des candidatures (limite relevée en phase 2).
+- **Test de bout en bout en Node plutôt qu'en PowerShell** : Windows PowerShell 5.1 décode mal le JSON UTF-8 ; Node est déjà installé pour Newman.
+
+### Incident : la cause d'une panne se perdait entre deux services
+Avec S3 arrêté, S4 répondait correctement 503 `SERVICE_OFFRES_INDISPONIBLE` (« le responsable a été prévenu »), mais le client REST commun remplaçait toute réponse 5xx par « le service candidatures est indisponible ». L'étudiant aurait lu la mauvaise cause. Désormais, un 5xx accompagné de notre corps d'erreur est transmis tel quel ; seul un service muet ou sans réponse structurée donne l'erreur générique. Trouvé par le test de bout en bout.
+
+### Points techniques à retenir
+- **Une exception levée dans un filtre Jersey passe par le `MappeurErreurs`** : 401 et 403 du portail ont le même corps JSON que les autres erreurs.
+- **Chemin encodé remontant au-dessus de la racine** (`/..%2F...`) : Grizzly le refuse lui-même avec un 500 sans corps, avant notre code. Rien ne fuit (vérifié par test) ; seul le code HTTP est inhabituel.
+- **Les routes `/api/...` passent avant la route générique des fichiers** : JAX-RS préfère le chemin le plus précis.
+
+### Limites connues
+- **Pas de limitation des tentatives de connexion** : en production, il faudrait bloquer temporairement un compte après plusieurs échecs.
+- **Un étudiant ou une entreprise créé par le responsable n'a pas de compte portail.** Il faudrait créer le compte et envoyer un lien d'activation.
+- **Liste des offres : un appel de compatibilité par offre** (S3, qui appelle S1). Acceptable pour une quinzaine d'offres ; au-delà, il faudrait une opération groupée.
+- **L'API du portail n'a pas de contrat OpenAPI** : c'est une passerelle propre à l'interface, pas un service exposé à d'autres clients.
+

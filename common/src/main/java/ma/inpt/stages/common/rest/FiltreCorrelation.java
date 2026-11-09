@@ -33,6 +33,11 @@ public final class FiltreCorrelation implements ContainerRequestFilter, Containe
         if (id != null) {
             reponse.getHeaders().putSingle(Correlation.ENTETE_HTTP, id);
         }
+        // Charset explicite : sans lui, certains clients (Windows PowerShell 5.1) lisent le JSON en Latin-1.
+        jakarta.ws.rs.core.MediaType type = reponse.getMediaType();
+        if (type != null && type.isCompatible(jakarta.ws.rs.core.MediaType.APPLICATION_JSON_TYPE) && !type.getParameters().containsKey("charset")) {
+            reponse.getHeaders().putSingle("Content-Type", type.withCharset("utf-8"));
+        }
         String chemin = requete.getUriInfo().getPath();
         if (!chemin.equals("health") && !chemin.startsWith("docs")) {
             Object debut = requete.getProperty(DEBUT);

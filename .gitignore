@@ -29,3 +29,4 @@ rapport/*.fls
 rapport/*.fdb_latexmk
 rapport/*.synctex.gz
 tests/postman/rapports/
+tests/e2e/rapports/

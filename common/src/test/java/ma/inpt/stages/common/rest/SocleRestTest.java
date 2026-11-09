@@ -265,9 +265,11 @@ class SocleRestTest {
     }
 
     @Test
-    void leClientRestTraduitPanneEt5xxEnIndisponibilite() throws Exception {
+    void leClientRestTraduitUnePanneEnIndisponibiliteEtGardeLaCauseDUn503() throws Exception {
         ClientRest client = new ClientRest(base + "/api/v1", CLE_PORTAIL, "essais", Configuration.charger());
-        assertEquals("SERVICE_ESSAIS_INDISPONIBLE", assertThrows(ErreurMetier.class, () -> client.get("/essais/panne")).code());
+        ClientRest.Reponse cause = client.get("/essais/panne");
+        assertEquals(503, cause.statut(), "un 503 structuré garde sa cause réelle");
+        assertEquals("BASE_INDISPONIBLE", cause.code());
         int libre;
         try (ServerSocket s = new ServerSocket(0)) {
             libre = s.getLocalPort();

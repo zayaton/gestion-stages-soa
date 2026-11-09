@@ -16,7 +16,8 @@ import ma.inpt.stages.common.ErreurMetier;
 
 /**
  * Appels JSON vers un autre service REST : clé d'API, corrélation et délais d'attente.
- * Une panne (service arrêté, délai dépassé, réponse 5xx) devient une indisponibilité ; un 4xx est renvoyé à l'appelant.
+ * Une panne (service arrêté, délai dépassé, 5xx sans corps d'erreur) devient une indisponibilité ; une réponse d'erreur
+ * structurée (4xx, ou 5xx avec {code, message}) est renvoyée telle quelle à l'appelant.
  */
 public final class ClientRest {
 
@@ -68,9 +69,21 @@ public final class ClientRest {
         return envoyer("DELETE", chemin, null);
     }
 
+    /** Appel avec l'auteur de l'opération (en-tête X-Acteur), repris dans l'historique du service appelé. */
+    public Reponse appeler(String methode, String chemin, Object corps, String acteur) {
+        return envoyer(methode, chemin, corps, acteur);
+    }
+
     private Reponse envoyer(String methode, String chemin, Object corps) {
+        return envoyer(methode, chemin, corps, null);
+    }
+
+    private Reponse envoyer(String methode, String chemin, Object corps, String acteur) {
         HttpRequest.Builder requete = HttpRequest.newBuilder(URI.create(base + chemin)).timeout(delaiLecture)
                 .header("Accept", "application/json").header(FiltreSecurite.ENTETE, cle);
+        if (acteur != null) {
+            requete.header(Acteur.ENTETE, acteur);
+        }
         String correlation = Correlation.courant();
         if (correlation != null) {
             requete.header(Correlation.ENTETE_HTTP, correlation);
@@ -83,10 +96,12 @@ public final class ClientRest {
                         .method(methode, HttpRequest.BodyPublishers.ofString(Json.MAPPEUR.writeValueAsString(corps), StandardCharsets.UTF_8));
             }
             HttpResponse<String> r = http.send(requete.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            if (r.statusCode() >= 500) {
+            JsonNode json = r.body() == null || r.body().isBlank() ? NullNode.getInstance() : Json.MAPPEUR.readTree(r.body());
+            // Un 5xx avec notre corps d'erreur garde sa cause réelle (par exemple « S3 indisponible » vue par S4).
+            // Sans ce corps, la seule information sûre est que ce service-ci ne répond pas correctement.
+            if (r.statusCode() >= 500 && !json.hasNonNull("code")) {
                 throw indisponible();
             }
-            JsonNode json = r.body() == null || r.body().isBlank() ? NullNode.getInstance() : Json.MAPPEUR.readTree(r.body());
             return new Reponse(r.statusCode(), json);
         } catch (JsonProcessingException e) {
             throw indisponible();

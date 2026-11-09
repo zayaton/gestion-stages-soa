@@ -70,6 +70,7 @@ public final class MappeurErreurs implements ExceptionMapper<Throwable> {
             case INTROUVABLE -> 404;
             case REQUETE_INVALIDE -> 400;
             case DONNEES_INVALIDES -> 422;
+            case NON_AUTHENTIFIE -> 401;
             case INTERDIT -> 403;
             case CONFLIT -> 409;
             case INDISPONIBLE -> 503;

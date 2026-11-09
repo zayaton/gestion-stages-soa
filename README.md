@@ -76,6 +76,16 @@ Erreurs : corps JSON uniforme `{code, message, details, timestamp, path}`. Swagg
 
 **Mode d'orchestration** (variable `ORCHESTRATION_MODE`) : `direct` pour l'instant ; `bonita` arrive avec le processus Bonita.
 
+## Portail (port 8090)
+
+Le portail sert l'interface (phase 6) et expose l'API des trois espaces sous `/api`. Il appelle les six services :
+clients SOAP générés par wsimport depuis les WSDL du dépôt, clients REST avec la clé `portail`.
+
+- Connexion : `POST /api/auth/connexion` avec `{"identifiant": "...", "motDePasse": "..."}`. La réponse contient un jeton,
+  à envoyer ensuite dans `Authorization: Bearer <jeton>`. Session de 8 heures ; `POST /api/auth/deconnexion` la ferme.
+- Espaces : `/api/etudiant/...`, `/api/entreprise/...`, `/api/responsable/...`. Rôle vérifié par le serveur (403 sinon).
+- Une entreprise voit les coordonnées des étudiants masquées (`06******12`, `s***@inpt.ac.ma`).
+
 ## Tests
 
 ```powershell
@@ -88,8 +98,10 @@ Erreurs : corps JSON uniforme `{code, message, details, timestamp, path}`. Swagg
 .\scripts\tests-soapui.ps1         # tests SoapUI, y compris de vraies pannes (S3, S1, MySQL)
 ```
 
-`tests-soapui.ps1` et `tests-postman.ps1` modifient les données : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
-La collection à importer dans Postman est `tests\postman\Stages-SOA.postman_collection.json`, avec l'environnement `Stages-SOA-local.postman_environment.json`. Rapport HTML de la dernière exécution : `tests\postmanapportsapport-newman.html`.
+`tests-soapui.ps1`, `tests-postman.ps1` et `test-bout-en-bout.ps1` modifient les données : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
+La collection à importer dans Postman est `tests\postman\Stages-SOA.postman_collection.json`, avec l'environnement `Stages-SOA-local.postman_environment.json`. Rapport HTML de la dernière exécution : `tests\postman
+apports
+apport-newman.html`.
 Le projet SoapUI à ouvrir dans l'interface graphique est `tests\soapui\Stages-SOA-soapui-project.xml`.
 
 ## Comptes de démonstration
