@@ -74,3 +74,44 @@
 - **Suppression d'un étudiant avec des candidatures** : S1 ne peut pas le vérifier seul. Le portail devra interroger S4 avant de la proposer (phase 4).
 - **`decrementerPlaces` n'est pas idempotent** : relancer cette étape retire une seconde place. Le processus ne doit la relancer que si elle a échoué (phases 4 et 5).
 - **`tests-soapui.ps1` laisse des lignes de test en base** (une offre `POURVUE`, créée pour tester R10, ne peut pas être supprimée). Il faut relancer `reset-db.ps1` ensuite.
+
+## Phase 3 – Services REST S4, S5, S6
+
+### Réalisé
+- Socle REST commun (`common/rest`) : corps d'erreur uniforme `{code, message, details, timestamp, path}`, contrôle `X-API-Key` (401) et droits par opération avec `@ClientsAutorises` (403), corrélation `X-Correlation-Id`, journal d'accès, JSON strict (champ inconnu refusé), client REST avec délais d'attente.
+- Contrat OpenAPI 3 écrit à la main pour chaque service (`openapi.yaml`, en français), servi à `/openapi.yaml`, avec Swagger UI hors ligne à `/docs/`. Un test compare les routes du code à celles du contrat : une route non documentée fait échouer la construction.
+- **S6 Suivi** : stages, transitions de statut, comptes rendus, évaluations (note sur 20), historique des opérations.
+- **S5 Notifications** : huit gabarits HTML en français, envoi SMTP réel vers Mailpit, statut `ENVOYEE` ou `ECHEC`, rappels de date limite quotidiens et déclenchables à la main.
+- **S4 Candidatures** : soumissions, candidatures, historique, règles R5, R6, R8, R9, et l'orchestration en mode `direct` (étapes 1 à 9, R1 à R11), avec le journal des étapes pour la vue BPMN.
+- Collection Postman générée (`tests/postman`), lancée par Newman via `scripts/tests-postman.ps1` : 87 requêtes, 226 assertions, un test négatif par règle.
+
+### Décisions
+- **L'orchestration `direct` est faite en phase 3 et non en phase 4.** Elle vit dans S4, et sans elle la collection Postman ne pouvait pas montrer les rejets R1 à R7. La phase 4 garde la passerelle et le script de bout en bout.
+- **`POST /soumissions` répond 202 dans tous les cas où le processus a pu s'exécuter** : statut `ENREGISTREE` ou `REJETEE` (règle et motif). Un rejet est un résultat métier, pas une erreur HTTP. 503 si un service nécessaire est arrêté.
+- **Ordre des contrôles** : R1 (étape 2), puis R2 et R7 (étape 3), puis R3, R4, R5, R6 (étape 4). Le premier échec arrête les contrôles et donne le motif.
+- **R10 : la place est réservée avant d'enregistrer l'acceptation.** S'il n'en reste plus, la décision est refusée (409) et rien ne change. On évite ainsi d'accepter un étudiant sans place. Création du stage et passage `EN_STAGE` viennent ensuite ; s'ils échouent, l'étape est marquée `ECHEC`, le responsable est alerté et `POST /candidatures/{id}/suivi/reprendre` les rejoue sans effet de bord (S6 est idempotent, S1 accepte de reprendre le même statut).
+- **R11** : la candidature reste `EN_COURS_EVALUATION` ; une ligne d'historique (statut inchangé) garde la trace du complément demandé.
+- **Une notification qui échoue ne bloque jamais le processus** : S5 l'enregistre en `ECHEC` (réponse 201), S4 marque l'étape `ECHEC` et continue.
+- **Rappels** : toutes les données (S3, S1, S2, S4) sont lues avant le premier envoi ; si l'une manque, rien n'est envoyé (503). Un rappel déjà envoyé n'est jamais renvoyé ; un rappel en échec l'est au passage suivant.
+- **Variables de gabarit inconnues refusées (422)** : une faute de frappe dans un appelant ne produit pas un courriel incomplet.
+- **Clés d'API stockées en SHA-256, pas en BCrypt** : ce sont des clés longues et aléatoires, vérifiées à chaque requête (BCrypt coûterait environ 70 ms par appel).
+- **Droits par client** : seuls `portail` et `postman` déposent une candidature ; seuls le processus (`bonita`) et les services l'enregistrent ou changent son statut brut ; le portail ne peut pas faire envoyer de courriel arbitraire.
+- **Table `etape_processus`** : chaque étape exécutée, pour la vue BPMN en direct. En mode `bonita`, le processus l'alimentera par `POST /soumissions/{id}/etapes`. Les candidatures de démonstration ont leurs soumissions et étapes.
+- **Données de démonstration** : chaque scénario a désormais son propre étudiant. Le parcours nominal fait passer Salma `EN_STAGE` ; les scénarios R2 à R4 utilisent Aïcha Tahiri (voir l'incident ci-dessous).
+
+### Points techniques à retenir
+- **Ressources Jersey par requête** : une ressource enregistrée comme instance unique ne peut pas recevoir le contexte de la requête (`Not inside a request scope`). Les ressources sont enregistrées par classe ; le service partagé est injecté par un `AbstractBinder`.
+- **Un service démarré verrouille ses jars** : arrêter les services (`stop-all.ps1 -ServicesSeuls`) avant de reconstruire, sinon Maven ne peut pas copier les dépendances dans `target/lib`.
+- **Paramètre de chemin non numérique** (`/stages/abc`) : JAX-RS répond 404. Le code d'erreur suit désormais le statut (`RESSOURCE_INTROUVABLE`).
+- **Jackson et les records** : un champ obligatoire absent est signalé avant un champ inconnu ; le message dit « absente ou invalide ».
+
+### Incident : scénarios de démonstration qui se gênaient
+La première exécution de la collection Postman a échoué sur R2, R3 et R4 : Salma, acceptée dans le parcours nominal, était devenue `EN_STAGE`, et R1 la rejetait avant les règles visées. Le même défaut existait dans `docs/SCENARIOS_DEMO.md` : enregistrer le parcours nominal en premier dans la vidéo aurait cassé ces trois démonstrations. Corrigé en donnant ces scénarios à Aïcha Tahiri, avec une précondition vérifiée par `verifier-socle.ps1` et une consigne d'ordre dans le document.
+
+### Limites connues
+- **Mode `bonita` non branché** : `ORCHESTRATION_MODE=bonita` arrête S4 au démarrage avec un message clair. Le pont vers l'API Bonita arrive en phase 5.
+- **R10, cas extrême** : si la base de S4 tombe entre la réservation de la place (S3) et l'enregistrement de l'acceptation, la place est perdue. Il faudrait une compensation (rendre la place) : documenté, non traité.
+- **Quand une offre devient `POURVUE`**, les autres candidatures en cours sur cette offre restent en évaluation ; l'entreprise les refuse elle-même.
+- **Propriété des données** : S4 ne vérifie pas que l'entreprise qui décide est celle de l'offre ; c'est le rôle de la passerelle (phase 4), qui connaît l'utilisateur connecté.
+- **Postman** : la collection se joue sur des données fraîches (le script réinitialise les bases).
+

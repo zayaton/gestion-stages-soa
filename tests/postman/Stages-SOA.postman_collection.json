@@ -1,0 +1,3804 @@
+{
+  "info": {
+    "_postman_id": "c458eb72-464f-5a59-9886-f4764313b1af",
+    "name": "Stages SOA - services REST",
+    "description": "Tests des services REST S4, S5 et S6. À jouer dans l'ordre sur des données fraîches : scripts\\tests-postman.ps1.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Sécurité des API REST",
+      "description": "Clé d'API par client (401) et droits par opération (403).",
+      "item": [
+        {
+          "name": "Sans clé d'API : 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code NON_AUTHENTIFIE\", () => pm.expect(pm.response.json().code).to.eql(\"NON_AUTHENTIFIE\"));",
+                  "pm.test(\"En-tête WWW-Authenticate\", () => pm.response.to.have.header(\"WWW-Authenticate\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clé inconnue : 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "cle-inventee"
+              }
+            ],
+            "url": "{{url_suivi}}/stages"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code NON_AUTHENTIFIE\", () => pm.expect(pm.response.json().code).to.eql(\"NON_AUTHENTIFIE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Le portail ne fait pas envoyer de courriel : 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"REFUS\",\n  \"destinataire\": \"x@inpt.ac.ma\",\n  \"variables\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code ACCES_INTERDIT\", () => pm.expect(pm.response.json().code).to.eql(\"ACCES_INTERDIT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bonita ne dépose pas à la place de l'étudiant : 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_bonita}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 1,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code ACCES_INTERDIT\", () => pm.expect(pm.response.json().code).to.eql(\"ACCES_INTERDIT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La corrélation est renvoyée",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              },
+              {
+                "key": "X-Correlation-Id",
+                "value": "postman-correlation"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"X-Correlation-Id renvoyé\", () => pm.expect(pm.response.headers.get(\"X-Correlation-Id\")).to.eql(\"postman-correlation\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Parcours nominal : du dépôt au stage",
+      "description": "Salma El Idrissi candidate à l'offre 1 ; NovaPay Maghreb accepte (étapes 1 à 9).",
+      "item": [
+        {
+          "name": "Dépôt de la candidature (étapes 1 à 6)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 1,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Candidature enregistrée\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"ENREGISTREE\");",
+                  "  pm.expect(s.candidatureId).to.be.a(\"number\");",
+                  "  pm.collectionVariables.set(\"candidature_nominale\", s.candidatureId);",
+                  "});",
+                  "",
+                  "pm.test(\"Les huit premières étapes sont passées dans l'ordre\", () => {",
+                  "  pm.expect(pm.response.json().etapes.map(e => e.etape)).to.eql([\"RECEPTION\", \"VERIFICATION_ETUDIANT\", \"VERIFICATION_OFFRE\",",
+                  "    \"CONTROLE_CANDIDATURE\", \"PASSERELLE_DECISION\", \"ENREGISTREMENT\", \"NOTIFICATION_DEPOT\", \"TRANSMISSION_ENTREPRISE\"]);",
+                  "  pm.expect(pm.response.json().etapes.every(e => e.resultat === \"OK\")).to.be.true;",
+                  "});",
+                  "pm.test(\"En-tête Location vers la soumission\", () => pm.expect(pm.response.headers.get(\"Location\")).to.match(/\\/api\\/v1\\/soumissions\\/\\d+$/));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La candidature est déposée, avec son score indicatif",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Statut DEPOSEE et score de compétences\", () => {",
+                  "  const c = pm.response.json();",
+                  "  pm.expect(c.statut).to.eql(\"DEPOSEE\");",
+                  "  pm.expect(c.scoreCompetences).to.be.within(0, 100);",
+                  "  pm.expect(c.entrepriseId).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Décider avant d'évaluer : 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"ACCEPTER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DECISION_IMPOSSIBLE\", () => pm.expect(pm.response.json().code).to.eql(\"DECISION_IMPOSSIBLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "L'entreprise démarre l'évaluation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}/evaluation"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"EN_COURS_EVALUATION\", () => pm.expect(pm.response.json().statut).to.eql(\"EN_COURS_EVALUATION\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "L'entreprise accepte (étapes 7 à 9, R10)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"ACCEPTER\",\n  \"commentaire\": \"Profil retenu, bienvenue chez NovaPay.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Candidature ACCEPTEE\", () => pm.expect(pm.response.json().candidature.statut).to.eql(\"ACCEPTEE\"));",
+                  "pm.test(\"R10 : place retirée, résultat notifié, stage créé, étudiant EN_STAGE\", () => {",
+                  "  pm.expect(pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat)).to.eql([\"DECISION_ENTREPRISE:OK\", \"MISE_A_JOUR_PLACES:OK\",",
+                  "    \"NOTIFICATION_RESULTAT:OK\", \"CREATION_STAGE:OK\", \"MISE_A_JOUR_ETUDIANT:OK\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historique : déposée, en évaluation, acceptée",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}/historique"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Trois changements de statut, avec acteur et date\", () => {",
+                  "  const h = pm.response.json();",
+                  "  pm.expect(h.map(x => x.nouveauStatut)).to.eql([\"DEPOSEE\", \"EN_COURS_EVALUATION\", \"ACCEPTEE\"]);",
+                  "  h.forEach(x => { pm.expect(x.acteur).to.not.be.empty; pm.expect(x.date).to.match(/^\\d{4}-\\d{2}-\\d{2}T/); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "S6 : le dossier de stage existe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/candidatures/{{candidature_nominale}}/stage"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Stage PLANIFIE de l'étudiante 1\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"PLANIFIE\");",
+                  "  pm.expect(s.etudiantId).to.eql(1);",
+                  "  pm.expect(s.encadrantEntreprise).to.eql(\"Ghita Sentissi\");",
+                  "  pm.expect(new Date(s.dateFin) > new Date(s.dateDebut)).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R8 : une candidature acceptée ne s'annule pas",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code ANNULATION_IMPOSSIBLE\", () => pm.expect(pm.response.json().code).to.eql(\"ANNULATION_IMPOSSIBLE\"));",
+                  "pm.test(\"La règle est citée\", () => pm.expect(pm.response.json().message).to.include(\"R8\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "S5 : l'étudiante a reçu confirmation puis acceptation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications?destinataire=salma.elidrissi@inpt.ac.ma"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"CONFIRMATION_DEPOT et ACCEPTATION envoyées\", () => {",
+                  "  const types = pm.response.json().filter(n => n.statut === \"ENVOYEE\").map(n => n.type);",
+                  "  pm.expect(types).to.include(\"CONFIRMATION_DEPOT\");",
+                  "  pm.expect(types).to.include(\"ACCEPTATION\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mailpit : les courriels sont réellement arrivés",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              }
+            ],
+            "url": "{{url_mailpit}}/search?query=to:salma.elidrissi@inpt.ac.ma"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Confirmation et acceptation dans la boîte\", () => {",
+                  "  const sujets = pm.response.json().messages.map(m => m.Subject);",
+                  "  pm.expect(sujets.some(s => s.startsWith(\"Candidature enregistrée\"))).to.be.true;",
+                  "  pm.expect(sujets.some(s => s.startsWith(\"Candidature retenue\"))).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Règles R1 à R7 : un rejet par règle",
+      "description": "Chaque cas de docs/SCENARIOS_DEMO.md, avec un étudiant différent de celui du parcours nominal (qui est désormais EN_STAGE). Réponse 202 : le dépôt est traité, la candidature n'est pas enregistrée.",
+      "item": [
+        {
+          "name": "R1 : étudiante suspendue (Sara Bouzidi)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 17,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R1\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R1\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"suspendu\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});",
+                  "pm.test(\"Les contrôles suivants ne sont pas exécutés\", () => pm.expect(pm.response.json().etapes.map(e => e.etape)).to.not.include(\"VERIFICATION_OFFRE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R1 : étudiant déjà en stage (Ilyas Zemmouri)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 16,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R1\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R1\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"déjà en stage\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R2 : offre en brouillon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 20,\n  \"offreId\": 11,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R2\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R2\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"BROUILLON\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R2 : entreprise inactive",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 20,\n  \"offreId\": 12,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R2\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R2\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"Médina Systèmes\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R3 : date limite dépassée",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 20,\n  \"offreId\": 13,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R3\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R3\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"date limite\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R4 : plus de place",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 20,\n  \"offreId\": 14,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R4\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R4\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"plus de place\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R5 : candidature déjà déposée (Youssef Benjelloun)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 2,\n  \"offreId\": 2,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R5\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R5\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"déjà une candidature\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R6 : cinq candidatures actives (Imane Alaoui)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 3,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R6\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R6\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"5 candidatures actives\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R7 : niveau insuffisant (Nour Chraibi, 1A)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 5,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R7\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R7\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"niveau 2A\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R7 : filière non acceptée (Anas Ouazzani, ICCN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 6,\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R7\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R7\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"ICCN\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Les rejets restent consultables par l'étudiante (Aïcha Tahiri)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/etudiants/20/soumissions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Rejets R2, R2, R3 et R4, aucune candidature créée\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.map(x => x.regleRejetee).sort()).to.eql([\"R2\", \"R2\", \"R3\", \"R4\"]);",
+                  "  s.forEach(x => pm.expect(x.candidatureId).to.be.undefined);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mailpit : le rejet donne le motif à l'étudiante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              }
+            ],
+            "url": "{{url_mailpit}}/search?query=to:sara.bouzidi@inpt.ac.ma"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Courriel de rejet reçu, avec le titre de l'offre\", () => {",
+                  "  const sujets = pm.response.json().messages.map(m => m.Subject);",
+                  "  pm.expect(sujets).to.include(\"Candidature non recevable : Stage AMOA – Paiement mobile\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. R5 et R6 à l'enregistrement",
+      "description": "Le processus enregistre la candidature : R5 et R6 y sont revérifiées de façon atomique (409).",
+      "item": [
+        {
+          "name": "Vérification de doublon (R5)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/verification-doublon?etudiantId=2&offreId=2"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Doublon détecté : candidature 1\", () => { const v = pm.response.json(); pm.expect(v.doublon).to.be.true; pm.expect(v.candidatureId).to.eql(1); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Compte des candidatures actives (R6)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/etudiants/3/candidatures/actives/compte"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"5 sur 5 : limite atteinte\", () => { const c = pm.response.json(); pm.expect(c.actives).to.eql(5); pm.expect(c.limiteAtteinte).to.be.true; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R5 : enregistrer un doublon : 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_bonita}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 2,\n  \"offreId\": 2,\n  \"entrepriseId\": 3,\n  \"lettreMotivation\": \"Doublon\",\n  \"scoreCompetences\": 50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code CANDIDATURE_EN_DOUBLE\", () => pm.expect(pm.response.json().code).to.eql(\"CANDIDATURE_EN_DOUBLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R6 : enregistrer une sixième candidature active : 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_bonita}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 3,\n  \"offreId\": 1,\n  \"entrepriseId\": 1,\n  \"lettreMotivation\": \"Sixième\",\n  \"scoreCompetences\": 50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code LIMITE_CANDIDATURES_ATTEINTE\", () => pm.expect(pm.response.json().code).to.eql(\"LIMITE_CANDIDATURES_ATTEINTE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Le portail n'enregistre pas de candidature : 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 4,\n  \"offreId\": 4,\n  \"entrepriseId\": 7,\n  \"lettreMotivation\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code ACCES_INTERDIT\", () => pm.expect(pm.response.json().code).to.eql(\"ACCES_INTERDIT\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. R8 annulation et R9 transitions",
+      "description": "",
+      "item": [
+        {
+          "name": "R8 : annuler une candidature déposée (Youssef, candidature 1)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La candidature annulée reste consultable",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ANNULEE\", () => pm.expect(pm.response.json().statut).to.eql(\"ANNULEE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R8 : annuler deux fois : 409",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code ANNULATION_IMPOSSIBLE\", () => pm.expect(pm.response.json().code).to.eql(\"ANNULATION_IMPOSSIBLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R8 : annuler une candidature en cours d'évaluation (Rania, candidature 9) : 409",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/9"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code ANNULATION_IMPOSSIBLE\", () => pm.expect(pm.response.json().code).to.eql(\"ANNULATION_IMPOSSIBLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R5 : après annulation, Youssef peut recandidater",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 2,\n  \"offreId\": 2,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Candidature enregistrée\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"ENREGISTREE\");",
+                  "  pm.expect(s.candidatureId).to.be.a(\"number\");",
+                  "  pm.collectionVariables.set(\"candidature_recandidature\", s.candidatureId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R9 : DEPOSEE vers ACCEPTEE : 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/2/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"ACCEPTEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code TRANSITION_INTERDITE\", () => pm.expect(pm.response.json().code).to.eql(\"TRANSITION_INTERDITE\"));",
+                  "pm.test(\"La règle est citée\", () => pm.expect(pm.response.json().message).to.include(\"R9\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R9 : DEPOSEE vers EN_COURS_EVALUATION : 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/2/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"EN_COURS_EVALUATION\",\n  \"commentaire\": \"Ouverture du dossier\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"EN_COURS_EVALUATION\", () => pm.expect(pm.response.json().statut).to.eql(\"EN_COURS_EVALUATION\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R9 : EN_COURS_EVALUATION vers DEPOSEE : 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/2/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"DEPOSEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code TRANSITION_INTERDITE\", () => pm.expect(pm.response.json().code).to.eql(\"TRANSITION_INTERDITE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R9 : ACCEPTEE vers REFUSEE : 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/10/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"REFUSEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code TRANSITION_INTERDITE\", () => pm.expect(pm.response.json().code).to.eql(\"TRANSITION_INTERDITE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R9 : statut inconnu : 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/2/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"VALIDEE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. R10 : la dernière place rend l'offre pourvue",
+      "description": "Offre 6 (une place) : Anas et Hamza candidatent, Anas est accepté, Hamza ne peut plus l'être.",
+      "item": [
+        {
+          "name": "Anas Ouazzani candidate à l'offre 6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 6,\n  \"offreId\": 6,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Candidature enregistrée\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"ENREGISTREE\");",
+                  "  pm.expect(s.candidatureId).to.be.a(\"number\");",
+                  "  pm.collectionVariables.set(\"candidature_anas\", s.candidatureId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hamza Amrani candidate à l'offre 6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 8,\n  \"offreId\": 6,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Candidature enregistrée\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"ENREGISTREE\");",
+                  "  pm.expect(s.candidatureId).to.be.a(\"number\");",
+                  "  pm.collectionVariables.set(\"candidature_hamza\", s.candidatureId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Évaluation de la candidature d'Anas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_anas}}/evaluation"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Évaluation de la candidature de Hamza",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_hamza}}/evaluation"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anas est accepté : dernière place",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_anas}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"ACCEPTER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"ACCEPTEE\", () => pm.expect(pm.response.json().candidature.statut).to.eql(\"ACCEPTEE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R10 : accepter Hamza sans place restante : 409, rien ne change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_hamza}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"ACCEPTER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code PLUS_DE_PLACE\", () => pm.expect(pm.response.json().code).to.eql(\"PLUS_DE_PLACE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hamza reste en cours d'évaluation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_hamza}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"EN_COURS_EVALUATION\", () => pm.expect(pm.response.json().statut).to.eql(\"EN_COURS_EVALUATION\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R10 : l'offre 6 est désormais POURVUE (nouveau dépôt rejeté par R2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 15,\n  \"offreId\": 6,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Soumission rejetée par la règle R2\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"REJETEE\");",
+                  "  pm.expect(s.regleRejetee).to.eql(\"R2\");",
+                  "  pm.expect(s.candidatureId).to.be.undefined;",
+                  "  pm.expect(s.motifRejet).to.include(\"POURVUE\");",
+                  "});",
+                  "pm.test(\"Le rejet passe par la passerelle de décision puis notifie l'étudiant\", () => {",
+                  "  const etapes = pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat);",
+                  "  pm.expect(etapes).to.include(\"PASSERELLE_DECISION:REJET\");",
+                  "  pm.expect(etapes).to.include(\"NOTIFICATION_REJET:OK\");",
+                  "  pm.expect(etapes).to.not.include(\"ENREGISTREMENT:OK\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. R11 : demande de complément",
+      "description": "Mehdi Tazi candidate à l'offre 4 ; Détroit Data demande un complément, puis refuse.",
+      "item": [
+        {
+          "name": "Mehdi Tazi candidate à l'offre 4",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 4,\n  \"offreId\": 4,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"Candidature enregistrée\", () => {",
+                  "  const s = pm.response.json();",
+                  "  pm.expect(s.statut).to.eql(\"ENREGISTREE\");",
+                  "  pm.expect(s.candidatureId).to.be.a(\"number\");",
+                  "  pm.collectionVariables.set(\"candidature_mehdi\", s.candidatureId);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Évaluation démarrée",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_mehdi}}/evaluation"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R11 : complément sans précision : 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_mehdi}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"DEMANDER_COMPLEMENT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "R11 : complément demandé, la candidature reste en évaluation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_mehdi}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"DEMANDER_COMPLEMENT\",\n  \"commentaire\": \"Pouvez-vous préciser vos disponibilités à partir de février ?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Toujours EN_COURS_EVALUATION\", () => pm.expect(pm.response.json().candidature.statut).to.eql(\"EN_COURS_EVALUATION\"));",
+                  "pm.test(\"Étudiant notifié\", () => pm.expect(pm.response.json().etapes.map(e => e.etape + \":\" + e.resultat)).to.include(\"NOTIFICATION_RESULTAT:OK\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mailpit : la demande de complément est arrivée",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              }
+            ],
+            "url": "{{url_mailpit}}/search?query=to:mehdi.tazi@inpt.ac.ma"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Courriel de complément reçu\", () => pm.expect(pm.response.json().messages.map(m => m.Subject)).to.include(\"Complément d'information demandé : Ingénieur données – Flux logistiques\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La décision revient à l'entreprise : refus",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_mehdi}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"REFUSER\",\n  \"commentaire\": \"Disponibilités incompatibles avec le calendrier du projet.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"REFUSEE\", () => pm.expect(pm.response.json().candidature.statut).to.eql(\"REFUSEE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "L'historique garde la trace du complément",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_mehdi}}/historique"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Complément puis refus\", () => {",
+                  "  const h = pm.response.json();",
+                  "  pm.expect(h.some(x => x.commentaire && x.commentaire.startsWith(\"Demande de complément\"))).to.be.true;",
+                  "  pm.expect(h[h.length - 1].nouveauStatut).to.eql(\"REFUSEE\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. S4 : validation, consultation et erreurs",
+      "description": "",
+      "item": [
+        {
+          "name": "Dépôt incomplet : 422 avec chaque champ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));",
+                  "pm.test(\"Deux champs en cause\", () => pm.expect(pm.response.json().details).to.have.lengthOf(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "JSON mal typé : 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": \"un\",\n  \"offreId\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code REQUETE_INVALIDE\", () => pm.expect(pm.response.json().code).to.eql(\"REQUETE_INVALIDE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Champ inconnu : 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/soumissions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etudiantId\": 1,\n  \"offre\": 1,\n  \"lettreMotivation\": \"Je souhaite rejoindre votre équipe : ce stage correspond à mon projet professionnel.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code REQUETE_INVALIDE\", () => pm.expect(pm.response.json().code).to.eql(\"REQUETE_INVALIDE\"));",
+                  "pm.test(\"Le champ est nommé\", () => pm.expect(pm.response.json().details[0]).to.include(\"offre\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Candidature inconnue : 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/99999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code CANDIDATURE_INTROUVABLE\", () => pm.expect(pm.response.json().code).to.eql(\"CANDIDATURE_INTROUVABLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtre de statut inconnu : 400",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures?statut=FINIE"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code REQUETE_INVALIDE\", () => pm.expect(pm.response.json().code).to.eql(\"REQUETE_INVALIDE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Candidatures reçues par Zellige Conseil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/entreprises/3/candidatures"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Toutes de l'entreprise 3\", () => pm.response.json().forEach(c => pm.expect(c.entrepriseId).to.eql(3)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Étapes d'une candidature (vue BPMN)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_candidatures}}/candidatures/{{candidature_nominale}}/etapes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Au moins 13 étapes\", () => pm.expect(pm.response.json().length).to.be.at.least(13));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. S5 Notifications",
+      "description": "Envoi réel vers Mailpit, consultation, validation, rappels de date limite.",
+      "item": [
+        {
+          "name": "Envoyer une notification : 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"DEMANDE_COMPLEMENT\",\n  \"destinataire\": \"aicha.tahiri@inpt.ac.ma\",\n  \"variables\": {\n    \"nomEtudiant\": \"Aïcha Tahiri\",\n    \"titreOffre\": \"Transformation numérique\",\n    \"entreprise\": \"Agence Numérique du Bouregreg\",\n    \"commentaire\": \"Merci de joindre votre relevé de notes.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test(\"Envoyée, avec sujet et corps HTML\", () => {",
+                  "  const n = pm.response.json();",
+                  "  pm.expect(n.statut).to.eql(\"ENVOYEE\");",
+                  "  pm.expect(n.sujet).to.eql(\"Complément d'information demandé : Transformation numérique\");",
+                  "  pm.expect(n.corps).to.include(\"relevé de notes\");",
+                  "  pm.collectionVariables.set(\"notification\", n.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consulter la notification",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications/{{notification}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Même destinataire\", () => pm.expect(pm.response.json().destinataire).to.eql(\"aicha.tahiri@inpt.ac.ma\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Variable obligatoire manquante : 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"REFUS\",\n  \"destinataire\": \"x@inpt.ac.ma\",\n  \"variables\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));",
+                  "pm.test(\"Trois variables manquantes\", () => pm.expect(pm.response.json().details).to.have.lengthOf(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Type inconnu : 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"SMS\",\n  \"destinataire\": \"x@inpt.ac.ma\",\n  \"variables\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Adresse invalide : 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"DEMANDE_COMPLEMENT\",\n  \"destinataire\": \"pas-une-adresse\",\n  \"variables\": {\n    \"nomEtudiant\": \"Aïcha Tahiri\",\n    \"titreOffre\": \"Transformation numérique\",\n    \"entreprise\": \"Agence Numérique du Bouregreg\",\n    \"commentaire\": \"Merci de joindre votre relevé de notes.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification inconnue : 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_notifications}}/notifications/99999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code NOTIFICATION_INTROUVABLE\", () => pm.expect(pm.response.json().code).to.eql(\"NOTIFICATION_INTROUVABLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rappels de date limite : premier passage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_notifications}}/rappels/executer?jours=3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Offre 5 concernée, rappels envoyés\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.offresConcernees).to.be.at.least(1);",
+                  "  pm.expect(b.rappelsEnvoyes).to.be.at.least(1);",
+                  "  pm.expect(b.echecs).to.eql(0);",
+                  "  pm.expect(b.details.map(d => d.offreId)).to.include(5);",
+                  "});",
+                  "pm.test(\"Seuls les étudiants actifs compatibles : Omar oui, Salma (EN_STAGE depuis son acceptation) et Sara (suspendue) non\", () => {",
+                  "  const dest = pm.response.json().details.map(d => d.destinataire);",
+                  "  pm.expect(dest).to.include(\"omar.bennani@inpt.ac.ma\");",
+                  "  pm.expect(dest).to.not.include(\"salma.elidrissi@inpt.ac.ma\");",
+                  "  pm.expect(dest).to.not.include(\"sara.bouzidi@inpt.ac.ma\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rappels : un second passage ne renvoie rien",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_notifications}}/rappels/executer?jours=3"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Aucun nouvel envoi, tous déjà envoyés\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.rappelsEnvoyes).to.eql(0);",
+                  "  pm.expect(b.dejaEnvoyes).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rappels : nombre de jours hors bornes : 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_portail}}"
+              }
+            ],
+            "url": "{{url_notifications}}/rappels/executer?jours=99"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code REQUETE_INVALIDE\", () => pm.expect(pm.response.json().code).to.eql(\"REQUETE_INVALIDE\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. S6 Suivi des stages",
+      "description": "Création idempotente, statuts, comptes rendus, évaluations, historique.",
+      "item": [
+        {
+          "name": "Créer un stage : 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidatureId\": 900,\n  \"etudiantId\": 7,\n  \"offreId\": 8,\n  \"entrepriseId\": 2,\n  \"dateDebut\": \"2027-02-01\",\n  \"dateFin\": \"2027-05-24\",\n  \"encadrantEntreprise\": \"Driss Lamrani\",\n  \"encadrantPedagogique\": \"Pr. Nabil Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 201\", () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test(\"PLANIFIE\", () => { pm.expect(pm.response.json().statut).to.eql(\"PLANIFIE\"); pm.collectionVariables.set(\"stage\", pm.response.json().id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejouer la création : 200, même stage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidatureId\": 900,\n  \"etudiantId\": 7,\n  \"offreId\": 8,\n  \"entrepriseId\": 2,\n  \"dateDebut\": \"2027-02-01\",\n  \"dateFin\": \"2027-05-24\",\n  \"encadrantEntreprise\": \"Driss Lamrani\",\n  \"encadrantPedagogique\": \"Pr. Nabil Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Même identifiant\", () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"stage\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Autre stage pour la même candidature : 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidatureId\": 900,\n  \"etudiantId\": 8,\n  \"offreId\": 8,\n  \"entrepriseId\": 2,\n  \"dateDebut\": \"2027-02-01\",\n  \"dateFin\": \"2027-05-24\",\n  \"encadrantEntreprise\": \"Driss Lamrani\",\n  \"encadrantPedagogique\": \"Pr. Nabil Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code STAGE_EXISTANT\", () => pm.expect(pm.response.json().code).to.eql(\"STAGE_EXISTANT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dates incohérentes : 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidatureId\": 901,\n  \"etudiantId\": 7,\n  \"offreId\": 8,\n  \"entrepriseId\": 2,\n  \"dateDebut\": \"2027-02-01\",\n  \"dateFin\": \"2027-01-01\",\n  \"encadrantEntreprise\": \"Driss Lamrani\",\n  \"encadrantPedagogique\": \"Pr. Nabil Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Compte rendu avant le début : 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/comptes-rendus",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periode\": \"Semaine 1\",\n  \"contenu\": \"x\",\n  \"auteur\": \"Pr. Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code STAGE_NON_COMMENCE\", () => pm.expect(pm.response.json().code).to.eql(\"STAGE_NON_COMMENCE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PLANIFIE vers TERMINE : 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"TERMINE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code TRANSITION_INTERDITE\", () => pm.expect(pm.response.json().code).to.eql(\"TRANSITION_INTERDITE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Démarrer le stage",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/statut",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"EN_COURS\",\n  \"commentaire\": \"Arrivée dans l'entreprise\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"EN_COURS\", () => pm.expect(pm.response.json().statut).to.eql(\"EN_COURS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Compte rendu périodique : 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/comptes-rendus",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periode\": \"Semaines 1 à 4\",\n  \"contenu\": \"Mise en place de la supervision des déploiements.\",\n  \"auteur\": \"Pr. Nabil Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Période enregistrée\", () => pm.expect(pm.response.json().periode).to.eql(\"Semaines 1 à 4\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Note hors de 0 à 20 : 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/evaluations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 21,\n  \"evaluateur\": \"Pr. Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code DONNEES_INVALIDES\", () => pm.expect(pm.response.json().code).to.eql(\"DONNEES_INVALIDES\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Évaluation : 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/evaluations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": 15.5,\n  \"commentaire\": \"Travail rigoureux et autonome.\",\n  \"evaluateur\": \"Pr. Nabil Essaadi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Note 15,5\", () => pm.expect(pm.response.json().note).to.eql(15.5));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historique du stage",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/{{stage}}/historique"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Création, statut, compte rendu, évaluation\", () => pm.expect(pm.response.json().map(o => o.operation)).to.eql([\"CREATION\", \"CHANGEMENT_STATUT\", \"COMPTE_RENDU\", \"EVALUATION\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historique des stages d'un étudiant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/etudiants/18/stages"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Un stage terminé\", () => { pm.expect(pm.response.json()).to.have.lengthOf(1); pm.expect(pm.response.json()[0].statut).to.eql(\"TERMINE\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stages en cours",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages?statut=EN_COURS"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Tous EN_COURS\", () => pm.response.json().forEach(s => pm.expect(s.statut).to.eql(\"EN_COURS\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stage inconnu : 404",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Acteur",
+                "value": "postman"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{cle_postman}}"
+              }
+            ],
+            "url": "{{url_suivi}}/stages/99999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Code HTTP 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Corps d'erreur uniforme\", () => {",
+                  "  const e = pm.response.json();",
+                  "  [\"code\", \"message\", \"details\", \"timestamp\", \"path\"].forEach(c => pm.expect(e).to.have.property(c));",
+                  "  pm.expect(e.message).to.be.a(\"string\").and.not.empty;",
+                  "});",
+                  "pm.test(\"Code STAGE_INTROUVABLE\", () => pm.expect(pm.response.json().code).to.eql(\"STAGE_INTROUVABLE\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "candidature_nominale",
+      "value": ""
+    },
+    {
+      "key": "notification",
+      "value": ""
+    },
+    {
+      "key": "stage",
+      "value": ""
+    }
+  ]
+}

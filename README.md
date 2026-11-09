@@ -8,7 +8,7 @@ Hiba Elamdaoui, Aya Zahri, Hibatollah Ait Ahmed.
 ## Prérequis
 
 - JDK 17, Maven 3.9, Docker Desktop (Windows, avec WSL 2).
-- SoapUI Open Source pour les tests SOAP.
+- SoapUI Open Source pour les tests SOAP, Node.js LTS pour les tests Postman (Newman est installé automatiquement dans `tests\postman`).
 
 ## Démarrage
 
@@ -55,6 +55,27 @@ Chaque service expose `GET /health`.
 Les contrats font foi dans [contracts/src/main/resources/wsdl](contracts/src/main/resources/wsdl).
 Chaque appel exige un en-tête WS-Security : voir [docs/SECURITE_SOAP.md](docs/SECURITE_SOAP.md).
 
+## Services REST
+
+| Service | Base | Contrat OpenAPI | Swagger UI |
+|---|---|---|---|
+| S4 Candidatures | `http://localhost:8084/api/v1` | `http://localhost:8084/openapi.yaml` | http://localhost:8084/docs/ |
+| S5 Notifications | `http://localhost:8085/api/v1` | `http://localhost:8085/openapi.yaml` | http://localhost:8085/docs/ |
+| S6 Suivi des stages | `http://localhost:8086/api/v1` | `http://localhost:8086/openapi.yaml` | http://localhost:8086/docs/ |
+
+Chaque appel porte l'en-tête `X-API-Key` (une clé par client, 401 sans clé valide). Clés de démonstration :
+
+| Client | Clé |
+|---|---|
+| Portail | `cle-portail-2026-7Hq2Vd` |
+| Processus Bonita | `cle-bonita-2026-Xp4MzN` |
+| Appels entre services | `cle-services-2026-Lk9TwQ` |
+| Postman | `cle-postman-2026-Rb3WsE` |
+
+Erreurs : corps JSON uniforme `{code, message, details, timestamp, path}`. Swagger UI fonctionne sans Internet : bouton « Authorize » pour saisir la clé.
+
+**Mode d'orchestration** (variable `ORCHESTRATION_MODE`) : `direct` pour l'instant ; `bonita` arrive avec le processus Bonita.
+
 ## Tests
 
 ```powershell
@@ -67,7 +88,8 @@ Chaque appel exige un en-tête WS-Security : voir [docs/SECURITE_SOAP.md](docs/S
 .\scripts\tests-soapui.ps1         # tests SoapUI, y compris de vraies pannes (S3, S1, MySQL)
 ```
 
-`tests-soapui.ps1` laisse quelques lignes de test en base : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
+`tests-soapui.ps1` et `tests-postman.ps1` modifient les données : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
+La collection à importer dans Postman est `tests\postman\Stages-SOA.postman_collection.json`, avec l'environnement `Stages-SOA-local.postman_environment.json`. Rapport HTML de la dernière exécution : `tests\postmanapportsapport-newman.html`.
 Le projet SoapUI à ouvrir dans l'interface graphique est `tests\soapui\Stages-SOA-soapui-project.xml`.
 
 ## Comptes de démonstration

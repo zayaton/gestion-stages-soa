@@ -59,7 +59,7 @@ class SanteTest {
     @Test
     void leServeurRestExposeHealthEt503() throws Exception {
         int port = portLibre();
-        try (ServeurRest serveur = new ServeurRest("127.0.0.1", port, new ResourceConfig(), new VerificateurSante("S4 Évaluation", () -> false))) {
+        try (ServeurRest serveur = new ServeurRest("127.0.0.1", port, new ResourceConfig(), new VerificateurSante("S4 Évaluation", () -> false), null)) {
             serveur.demarrer();
             HttpResponse<String> reponse = get(port);
             assertEquals(503, reponse.statusCode());

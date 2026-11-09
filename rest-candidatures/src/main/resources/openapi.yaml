@@ -1,0 +1,473 @@
+openapi: 3.0.3
+info:
+  title: S4 Gestion des candidatures
+  version: "1.0"
+  description: |
+    Dépôt des candidatures, déroulement du processus et suivi de leur statut.
+
+    **Processus.** `POST /soumissions` déclenche le processus de candidature (étapes 1 à 6 de l'énoncé).
+    La candidature n'est **enregistrée** qu'après la passerelle de décision ; si une règle n'est pas respectée,
+    la soumission est **rejetée** avec la règle et le motif, et l'étudiant est notifié. L'entreprise décide ensuite
+    (`POST /candidatures/{id}/decision`, étapes 7 à 9).
+
+    **Mode d'orchestration** (variable `ORCHESTRATION_MODE`) : `bonita` (le processus BPMN orchestre, référence)
+    ou `direct` (les mêmes étapes exécutées en Java, secours pour le développement et les tests).
+
+    **Règles de gestion.**
+    | Règle | Contenu | Vérifiée |
+    |---|---|---|
+    | R1 | L'étudiant existe et est ACTIF | étape 2 (S1) |
+    | R2 | Offre ACTIVE, entreprise référencée et ACTIVE | étape 3 (S3, S2) |
+    | R3 | Date limite non dépassée | étape 4 (S3) |
+    | R4 | Au moins une place | étape 4 (S3) |
+    | R5 | Pas de doublon non annulé (étudiant, offre) | étape 4, puis à l'enregistrement (409) |
+    | R6 | Au plus 5 candidatures actives | étape 4, puis à l'enregistrement (409) |
+    | R7 | Filière acceptée et niveau suffisant ; score indicatif | étape 3 (S3) |
+    | R8 | Annulation seulement si DEPOSEE | DELETE (409 sinon) |
+    | R9 | DEPOSEE → EN_COURS_EVALUATION → ACCEPTEE ou REFUSEE ; DEPOSEE → ANNULEE | toute transition (409 sinon) |
+    | R10 | Acceptation : place −1 (POURVUE à 0), stage créé, étudiant EN_STAGE | décision ACCEPTER |
+    | R11 | Complément : étudiant notifié, candidature reste EN_COURS_EVALUATION | décision DEMANDER_COMPLEMENT |
+
+    **Sécurité** : en-tête `X-API-Key` (401 sinon). Certaines opérations sont réservées à certains clients (403 sinon),
+    indiqué opération par opération. **Corrélation** : `X-Correlation-Id`. **Historique** : `X-Acteur` (par exemple `etudiant:1`).
+servers:
+  - url: http://localhost:8084
+security:
+  - CleApi: []
+tags:
+  - name: Processus
+    description: Dépôt (déclenchement du processus), décision de l'entreprise, suivi des étapes
+  - name: Candidatures
+  - name: Contrôles
+    description: Vérifications utilisées par le processus (R5, R6)
+paths:
+  /api/v1/soumissions:
+    post:
+      tags: [Processus]
+      summary: Déposer une candidature (déclenche le processus)
+      description: |
+        Clients autorisés : `portail`, `postman`. Réponse **202** dans tous les cas où le processus a pu s'exécuter :
+        `statut` vaut `ENREGISTREE` (candidature créée, `candidatureId` renseigné) ou `REJETEE` (`regleRejetee`, `motifRejet`).
+        Si un service nécessaire ne répond pas, la réponse est **503** ; la soumission passe `ERREUR` et le responsable est alerté.
+      parameters: [{ $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouvelleSoumission' }
+            example: { etudiantId: 1, offreId: 1, lettreMotivation: "Étudiante en AMOA, je souhaite contribuer au recueil des besoins de votre application de paiement mobile." }
+      responses:
+        '202':
+          description: Soumission traitée (enregistrée ou rejetée)
+          headers: { Location: { schema: { type: string } } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Soumission' }
+              examples:
+                rejet:
+                  summary: Rejet R1
+                  value: { id: 14, etudiantId: 17, offreId: 1, statut: REJETEE, regleRejetee: R1, motifRejet: "Le compte de l'étudiant est suspendu : il ne peut pas candidater." }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+  /api/v1/soumissions/{id}:
+    get:
+      tags: [Processus]
+      summary: Consulter une soumission et ses étapes
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Soumission, content: { application/json: { schema: { $ref: '#/components/schemas/Soumission' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+  /api/v1/soumissions/{id}/etapes:
+    get:
+      tags: [Processus]
+      summary: Étapes du processus déjà exécutées (vue BPMN en direct)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Étapes, dans l'ordre, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Etape' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    post:
+      tags: [Processus]
+      summary: Signaler une étape exécutée par le processus Bonita
+      description: Clients autorisés `bonita`, `services`, `postman`. Alimente la vue BPMN quand Bonita orchestre.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouvelleEtape' }
+            example: { etape: VERIFICATION_ETUDIANT, resultat: OK, detail: "Étudiant actif (R1)" }
+      responses:
+        '201': { description: Étape ajoutée ; soumission à jour, content: { application/json: { schema: { $ref: '#/components/schemas/Soumission' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/soumissions/{id}/rejet:
+    post:
+      tags: [Processus]
+      summary: Enregistrer le rejet décidé par le processus Bonita (R1 à R7)
+      description: Clients autorisés `bonita`, `services`, `postman`. 409 si la soumission est déjà terminée.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Rejet' }
+            example: { regle: R3, motif: "La date limite de candidature est dépassée." }
+      responses:
+        '200': { description: Soumission rejetée, content: { application/json: { schema: { $ref: '#/components/schemas/Soumission' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/etudiants/{id}/soumissions:
+    get:
+      tags: [Processus]
+      summary: Soumissions d'un étudiant, y compris rejetées
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Soumissions, les plus récentes d'abord, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Soumission' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/candidatures:
+    post:
+      tags: [Candidatures]
+      summary: Enregistrer une candidature (appelé par le processus après la passerelle de décision)
+      description: |
+        Clients autorisés `bonita`, `services`, `postman`. R5 et R6 sont revérifiées de façon atomique :
+        409 `CANDIDATURE_EN_DOUBLE` (R5) ou `LIMITE_CANDIDATURES_ATTEINTE` (R6).
+      parameters: [{ $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouvelleCandidature' }
+            example: { soumissionId: 13, etudiantId: 1, offreId: 1, entrepriseId: 1, lettreMotivation: "Lettre de motivation.", scoreCompetences: 100 }
+      responses:
+        '201': { description: Candidature enregistrée (DEPOSEE), headers: { Location: { schema: { type: string } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Candidature' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+    get:
+      tags: [Candidatures]
+      summary: Lister les candidatures (filtres combinables)
+      parameters:
+        - { name: statut, in: query, schema: { $ref: '#/components/schemas/StatutCandidature' } }
+        - { name: etudiantId, in: query, schema: { type: integer, format: int64 } }
+        - { name: offreId, in: query, schema: { type: integer, format: int64 } }
+        - { name: entrepriseId, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Candidatures, les plus récentes d'abord, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Candidature' } } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+  /api/v1/candidatures/verification-doublon:
+    get:
+      tags: [Contrôles]
+      summary: Règle R5 - candidature non annulée existante pour ce couple étudiant et offre
+      parameters:
+        - { name: etudiantId, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: offreId, in: query, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        '200': { description: Résultat, content: { application/json: { schema: { $ref: '#/components/schemas/VerificationDoublon' }, example: { etudiantId: 2, offreId: 2, doublon: true, candidatureId: 1 } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+  /api/v1/candidatures/{id}:
+    get:
+      tags: [Candidatures]
+      summary: Consulter une candidature
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Candidature, content: { application/json: { schema: { $ref: '#/components/schemas/Candidature' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+    delete:
+      tags: [Candidatures]
+      summary: Annuler une candidature (règle R8)
+      description: La candidature passe ANNULEE et reste consultable. Seulement si elle est DEPOSEE ; sinon 409 `ANNULATION_IMPOSSIBLE`.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      responses:
+        '204': { description: Candidature annulée }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+  /api/v1/candidatures/{id}/historique:
+    get:
+      tags: [Candidatures]
+      summary: Historique des changements de statut (date, acteur, commentaire)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Historique, du plus ancien au plus récent, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Historique' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+  /api/v1/candidatures/{id}/etapes:
+    get:
+      tags: [Processus]
+      summary: Étapes du processus de la candidature (vue BPMN en direct)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Étapes, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Etape' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+  /api/v1/candidatures/{id}/statut:
+    patch:
+      tags: [Candidatures]
+      summary: Changer le statut (règle R9)
+      description: |
+        Clients autorisés `bonita`, `services`, `postman`. Transitions permises : DEPOSEE → EN_COURS_EVALUATION ou ANNULEE ;
+        EN_COURS_EVALUATION → ACCEPTEE ou REFUSEE. Toute autre : 409 `TRANSITION_INTERDITE`. Reprendre le statut actuel est sans effet (200).
+        Ce changement brut n'exécute pas les étapes de suivi : pour une décision complète, utiliser `/decision`.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangementStatut' }
+            example: { statut: EN_COURS_EVALUATION, commentaire: "Dossier ouvert par l'entreprise" }
+      responses:
+        '200': { description: Candidature après changement, content: { application/json: { schema: { $ref: '#/components/schemas/Candidature' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/candidatures/{id}/evaluation:
+    post:
+      tags: [Processus]
+      summary: Démarrer l'évaluation (l'entreprise ouvre le dossier)
+      description: |
+        Clients autorisés `portail`, `bonita`, `postman`. DEPOSEE devient EN_COURS_EVALUATION ; dès lors l'étudiant ne peut plus annuler (R8).
+        409 `EVALUATION_IMPOSSIBLE` si la candidature n'est pas DEPOSEE.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      responses:
+        '200': { description: Candidature EN_COURS_EVALUATION, content: { application/json: { schema: { $ref: '#/components/schemas/Candidature' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+  /api/v1/candidatures/{id}/decision:
+    post:
+      tags: [Processus]
+      summary: Décision de l'entreprise (étapes 7 à 9)
+      description: |
+        Clients autorisés `portail`, `postman`. Seulement pour une candidature EN_COURS_EVALUATION (sinon 409 `DECISION_IMPOSSIBLE`).
+        - `ACCEPTER` (R10) : une place est retirée de l'offre **avant** d'enregistrer l'acceptation (s'il n'en reste plus : 409 `PLUS_DE_PLACE`,
+          rien ne change) ; la candidature passe ACCEPTEE, l'étudiant est notifié, le stage est créé et l'étudiant passe EN_STAGE.
+          Si la création du stage ou la mise à jour de l'étudiant échoue, l'étape est marquée ECHEC, le responsable est alerté,
+          et `POST /candidatures/{id}/suivi/reprendre` la rejoue.
+        - `REFUSER` : la candidature passe REFUSEE et l'étudiant est notifié.
+        - `DEMANDER_COMPLEMENT` (R11) : `commentaire` obligatoire ; l'étudiant est notifié et la candidature reste EN_COURS_EVALUATION.
+        En mode `bonita`, cette opération termine la tâche humaine « Décision de l'entreprise » du processus.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Decision' }
+            example: { decision: ACCEPTER, commentaire: "Profil retenu, bienvenue." }
+      responses:
+        '200': { description: Décision appliquée ; résultat de chaque étape, content: { application/json: { schema: { $ref: '#/components/schemas/ResultatDecision' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+  /api/v1/candidatures/{id}/suivi/reprendre:
+    post:
+      tags: [Processus]
+      summary: Rejouer les étapes de suivi d'une candidature acceptée (stage, statut de l'étudiant)
+      description: Clients autorisés `portail`, `services`, `postman`. Sans effet sur ce qui est déjà fait. 409 si la candidature n'est pas ACCEPTEE.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      responses:
+        '200': { description: Résultat de chaque étape rejouée, content: { application/json: { schema: { $ref: '#/components/schemas/ResultatDecision' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+  /api/v1/etudiants/{id}/candidatures:
+    get:
+      tags: [Candidatures]
+      summary: Candidatures d'un étudiant
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Candidatures, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Candidature' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/etudiants/{id}/candidatures/actives/compte:
+    get:
+      tags: [Contrôles]
+      summary: Règle R6 - nombre de candidatures actives de l'étudiant
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Compte, content: { application/json: { schema: { $ref: '#/components/schemas/CompteActives' }, example: { etudiantId: 3, actives: 5, limite: 5, limiteAtteinte: true } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/offres/{id}/candidatures:
+    get:
+      tags: [Candidatures]
+      summary: Candidatures reçues pour une offre
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Candidatures, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Candidature' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/entreprises/{id}/candidatures:
+    get:
+      tags: [Candidatures]
+      summary: Candidatures reçues par une entreprise
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { name: statut, in: query, schema: { $ref: '#/components/schemas/StatutCandidature' } }
+      responses:
+        '200': { description: Candidatures, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Candidature' } } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+components:
+  securitySchemes:
+    CleApi: { type: apiKey, in: header, name: X-API-Key }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    Acteur: { name: X-Acteur, in: header, required: false, description: "Auteur de l'opération pour l'historique (par exemple etudiant:1, entreprise:3)", schema: { type: string, maxLength: 120 } }
+  responses:
+    RequeteInvalide: { description: Requête mal formée (JSON incorrect, champ inconnu, paramètre manquant), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    NonAuthentifie: { description: En-tête X-API-Key absent ou clé inconnue, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Interdit: { description: Client non autorisé pour cette opération (ACCES_INTERDIT), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Introuvable: { description: Candidature ou soumission inexistante, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Conflit: { description: "Règle de gestion violée : R5, R6, R8, R9, R10 (code et motif dans le corps)", content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    DonneesInvalides: { description: Données contraires aux règles de format (chaque champ en cause est listé), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Indisponible: { description: Base de données ou service partenaire indisponible, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+  schemas:
+    StatutCandidature: { type: string, enum: [DEPOSEE, EN_COURS_EVALUATION, ACCEPTEE, REFUSEE, ANNULEE] }
+    NouvelleSoumission:
+      type: object
+      required: [etudiantId, offreId, lettreMotivation]
+      properties:
+        etudiantId: { type: integer, format: int64, minimum: 1 }
+        offreId: { type: integer, format: int64, minimum: 1 }
+        lettreMotivation: { type: string, minLength: 30, maxLength: 5000 }
+    Soumission:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        etudiantId: { type: integer, format: int64 }
+        offreId: { type: integer, format: int64 }
+        lettreMotivation: { type: string }
+        statut: { type: string, enum: [EN_TRAITEMENT, ENREGISTREE, REJETEE, ERREUR] }
+        regleRejetee: { type: string, example: R3 }
+        motifRejet: { type: string }
+        bonitaCaseId: { type: integer, format: int64 }
+        candidatureId: { type: integer, format: int64, description: Renseigné si la soumission est ENREGISTREE }
+        creeLe: { type: string, format: date-time }
+        etapes: { type: array, items: { $ref: '#/components/schemas/Etape' } }
+    Etape:
+      type: object
+      properties:
+        etape:
+          type: string
+          enum: [RECEPTION, VERIFICATION_ETUDIANT, VERIFICATION_OFFRE, CONTROLE_CANDIDATURE, PASSERELLE_DECISION, NOTIFICATION_REJET, ENREGISTREMENT,
+                 NOTIFICATION_DEPOT, TRANSMISSION_ENTREPRISE, DEBUT_EVALUATION, DECISION_ENTREPRISE, NOTIFICATION_RESULTAT, MISE_A_JOUR_PLACES,
+                 CREATION_STAGE, MISE_A_JOUR_ETUDIANT, ANNULATION, ERREUR]
+        resultat: { type: string, enum: [OK, REJET, ECHEC, INFO] }
+        detail: { type: string }
+        date: { type: string, format: date-time }
+        acteur: { type: string }
+    NouvelleEtape:
+      type: object
+      required: [etape, resultat]
+      properties:
+        etape: { type: string, maxLength: 40 }
+        resultat: { type: string, enum: [OK, REJET, ECHEC, INFO] }
+        detail: { type: string, maxLength: 500 }
+    Rejet:
+      type: object
+      required: [regle, motif]
+      properties:
+        regle: { type: string, pattern: '^R[1-7]$' }
+        motif: { type: string, maxLength: 500 }
+    NouvelleCandidature:
+      type: object
+      required: [etudiantId, offreId, entrepriseId, lettreMotivation]
+      properties:
+        soumissionId: { type: integer, format: int64, minimum: 1 }
+        etudiantId: { type: integer, format: int64, minimum: 1 }
+        offreId: { type: integer, format: int64, minimum: 1 }
+        entrepriseId: { type: integer, format: int64, minimum: 1 }
+        lettreMotivation: { type: string, maxLength: 5000 }
+        scoreCompetences: { type: integer, minimum: 0, maximum: 100, description: Indicatif uniquement (R7) }
+    Candidature:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        soumissionId: { type: integer, format: int64 }
+        etudiantId: { type: integer, format: int64 }
+        offreId: { type: integer, format: int64 }
+        entrepriseId: { type: integer, format: int64 }
+        lettreMotivation: { type: string }
+        scoreCompetences: { type: integer }
+        statut: { $ref: '#/components/schemas/StatutCandidature' }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    Historique:
+      type: object
+      properties:
+        ancienStatut: { $ref: '#/components/schemas/StatutCandidature' }
+        nouveauStatut: { $ref: '#/components/schemas/StatutCandidature' }
+        date: { type: string, format: date-time }
+        acteur: { type: string }
+        commentaire: { type: string }
+    ChangementStatut:
+      type: object
+      required: [statut]
+      properties:
+        statut: { $ref: '#/components/schemas/StatutCandidature' }
+        commentaire: { type: string, maxLength: 1000 }
+    Decision:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [ACCEPTER, REFUSER, DEMANDER_COMPLEMENT] }
+        commentaire: { type: string, maxLength: 1000, description: Obligatoire pour DEMANDER_COMPLEMENT }
+    ResultatDecision:
+      type: object
+      properties:
+        candidature: { $ref: '#/components/schemas/Candidature' }
+        etapes: { type: array, items: { $ref: '#/components/schemas/Etape' } }
+    VerificationDoublon:
+      type: object
+      properties:
+        etudiantId: { type: integer, format: int64 }
+        offreId: { type: integer, format: int64 }
+        doublon: { type: boolean }
+        candidatureId: { type: integer, format: int64 }
+    CompteActives:
+      type: object
+      properties:
+        etudiantId: { type: integer, format: int64 }
+        actives: { type: integer }
+        limite: { type: integer }
+        limiteAtteinte: { type: boolean }
+    Erreur:
+      type: object
+      required: [code, message, details, timestamp, path]
+      properties:
+        code: { type: string, example: ANNULATION_IMPOSSIBLE }
+        message: { type: string, example: "Règle R8 : une candidature ne peut être annulée que tant qu'elle est déposée (statut actuel : EN_COURS_EVALUATION)." }
+        details: { type: array, items: { type: string } }
+        timestamp: { type: string, format: date-time }
+        path: { type: string, example: /api/v1/candidatures/9 }

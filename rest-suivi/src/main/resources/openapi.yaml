@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: S6 Suivi des stages
+  version: "1.0"
+  description: |
+    Dossiers des stages acceptés : statut et dates, comptes rendus périodiques, évaluations et historique.
+
+    **Sécurité** : chaque appel porte l'en-tête `X-API-Key` (un client par clé). Sans clé valide : 401.
+    **Corrélation** : l'en-tête facultatif `X-Correlation-Id` est repris dans les journaux et renvoyé dans la réponse.
+    **Historique** : l'en-tête facultatif `X-Acteur` (par exemple `responsable`) nomme l'auteur de l'opération.
+
+    Transitions de statut : `PLANIFIE` → `EN_COURS` ou `INTERROMPU` ; `EN_COURS` → `TERMINE` ou `INTERROMPU`.
+    `TERMINE` et `INTERROMPU` sont définitifs.
+servers:
+  - url: http://localhost:8086
+security:
+  - CleApi: []
+tags:
+  - name: Stages
+  - name: Suivi
+    description: Comptes rendus, évaluations, historique
+paths:
+  /api/v1/stages:
+    post:
+      tags: [Stages]
+      summary: Créer le dossier de stage d'une candidature acceptée (règle R10)
+      description: |
+        Appelé par le processus à l'étape 9. **Idempotent** : si un stage existe déjà pour la même candidature,
+        avec le même étudiant, la même offre et la même entreprise, il est renvoyé avec le code 200. Le processus peut donc rejouer l'étape.
+      parameters: [{ $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouveauStage' }
+            example: { candidatureId: 21, etudiantId: 1, offreId: 1, entrepriseId: 1, dateDebut: "2027-02-01", dateFin: "2027-05-01", encadrantEntreprise: "Ghita Sentissi", encadrantPedagogique: "Pr. Nabil Essaadi" }
+      responses:
+        '201': { description: Stage créé, headers: { Location: { schema: { type: string } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Stage' } } } }
+        '200': { description: Le stage existait déjà pour cette candidature, content: { application/json: { schema: { $ref: '#/components/schemas/Stage' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '409': { description: Un stage différent existe déjà pour cette candidature (STAGE_EXISTANT), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+    get:
+      tags: [Stages]
+      summary: Lister les stages
+      parameters:
+        - { name: statut, in: query, schema: { $ref: '#/components/schemas/StatutStage' } }
+        - { name: etudiantId, in: query, schema: { type: integer, format: int64 } }
+        - { name: entrepriseId, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Stages, du plus récent au plus ancien, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Stage' } } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+  /api/v1/stages/{id}:
+    get:
+      tags: [Stages]
+      summary: Consulter un stage (statut et dates)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Stage, content: { application/json: { schema: { $ref: '#/components/schemas/Stage' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/stages/{id}/statut:
+    patch:
+      tags: [Stages]
+      summary: Changer le statut d'un stage
+      description: Reprendre le statut actuel est sans effet (200). Une transition non prévue donne 409.
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangementStatut' }
+            example: { statut: EN_COURS, commentaire: "Arrivée de l'étudiant dans l'entreprise" }
+      responses:
+        '200': { description: Stage après changement, content: { application/json: { schema: { $ref: '#/components/schemas/Stage' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/stages/{id}/comptes-rendus:
+    post:
+      tags: [Suivi]
+      summary: Enregistrer un compte rendu périodique
+      description: Seulement pour un stage EN_COURS ou TERMINE (sinon 409 STAGE_NON_COMMENCE).
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouveauCompteRendu' }
+            example: { periode: "Semaines 5 à 8", contenu: "Rédaction des spécifications fonctionnelles.", auteur: "Pr. Nabil Essaadi" }
+      responses:
+        '201': { description: Compte rendu enregistré, content: { application/json: { schema: { $ref: '#/components/schemas/CompteRendu' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+    get:
+      tags: [Suivi]
+      summary: Lister les comptes rendus d'un stage
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Comptes rendus, du plus ancien au plus récent, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/CompteRendu' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+  /api/v1/stages/{id}/evaluations:
+    post:
+      tags: [Suivi]
+      summary: Enregistrer une évaluation (note sur 20 et commentaires)
+      description: Seulement pour un stage EN_COURS ou TERMINE (sinon 409 STAGE_NON_COMMENCE).
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouvelleEvaluation' }
+            example: { note: 15.5, commentaire: "Travail sérieux et autonome.", evaluateur: "Pr. Nabil Essaadi" }
+      responses:
+        '201': { description: Évaluation enregistrée, content: { application/json: { schema: { $ref: '#/components/schemas/Evaluation' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '409': { $ref: '#/components/responses/Conflit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+    get:
+      tags: [Suivi]
+      summary: Lister les évaluations d'un stage
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Évaluations, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Evaluation' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+  /api/v1/stages/{id}/historique:
+    get:
+      tags: [Suivi]
+      summary: Historique des opérations d'un stage
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Opérations, de la plus ancienne à la plus récente, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Operation' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+  /api/v1/etudiants/{id}/stages:
+    get:
+      tags: [Stages]
+      summary: Historique des stages d'un étudiant
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Stages de l'étudiant (liste vide s'il n'en a aucun), content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Stage' } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/candidatures/{id}/stage:
+    get:
+      tags: [Stages]
+      summary: Stage créé pour une candidature
+      description: Permet au processus de vérifier si l'étape 9 a déjà été faite.
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Stage, content: { application/json: { schema: { $ref: '#/components/schemas/Stage' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+components:
+  securitySchemes:
+    CleApi: { type: apiKey, in: header, name: X-API-Key }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    Acteur: { name: X-Acteur, in: header, required: false, description: Auteur de l'opération pour l'historique, schema: { type: string, maxLength: 120 } }
+  responses:
+    RequeteInvalide: { description: Requête mal formée (JSON incorrect, champ inconnu, type de valeur faux), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    NonAuthentifie: { description: En-tête X-API-Key absent ou clé inconnue, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Introuvable: { description: Ressource inexistante, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Conflit: { description: Opération contraire à l'état actuel (transition interdite, stage non commencé), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    DonneesInvalides: { description: Données contraires aux règles de format (chaque champ en cause est listé dans details), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Indisponible: { description: Base de données indisponible, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+  schemas:
+    StatutStage: { type: string, enum: [PLANIFIE, EN_COURS, TERMINE, INTERROMPU] }
+    Stage:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        candidatureId: { type: integer, format: int64 }
+        etudiantId: { type: integer, format: int64 }
+        offreId: { type: integer, format: int64 }
+        entrepriseId: { type: integer, format: int64 }
+        dateDebut: { type: string, format: date }
+        dateFin: { type: string, format: date }
+        encadrantEntreprise: { type: string }
+        encadrantPedagogique: { type: string }
+        statut: { $ref: '#/components/schemas/StatutStage' }
+        creeLe: { type: string, format: date-time }
+    NouveauStage:
+      type: object
+      required: [candidatureId, etudiantId, offreId, entrepriseId, dateDebut, dateFin]
+      properties:
+        candidatureId: { type: integer, format: int64, minimum: 1 }
+        etudiantId: { type: integer, format: int64, minimum: 1 }
+        offreId: { type: integer, format: int64, minimum: 1 }
+        entrepriseId: { type: integer, format: int64, minimum: 1 }
+        dateDebut: { type: string, format: date }
+        dateFin: { type: string, format: date, description: Postérieure à dateDebut }
+        encadrantEntreprise: { type: string, maxLength: 120 }
+        encadrantPedagogique: { type: string, maxLength: 120 }
+    ChangementStatut:
+      type: object
+      required: [statut]
+      properties:
+        statut: { $ref: '#/components/schemas/StatutStage' }
+        commentaire: { type: string, maxLength: 300 }
+    NouveauCompteRendu:
+      type: object
+      required: [periode, contenu, auteur]
+      properties:
+        periode: { type: string, maxLength: 60 }
+        contenu: { type: string, maxLength: 10000 }
+        auteur: { type: string, maxLength: 120 }
+    CompteRendu:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        stageId: { type: integer, format: int64 }
+        periode: { type: string }
+        contenu: { type: string }
+        auteur: { type: string }
+        creeLe: { type: string, format: date-time }
+    NouvelleEvaluation:
+      type: object
+      required: [note, evaluateur]
+      properties:
+        note: { type: number, minimum: 0, maximum: 20, description: Au plus deux décimales }
+        commentaire: { type: string, maxLength: 1000 }
+        evaluateur: { type: string, maxLength: 120 }
+    Evaluation:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        stageId: { type: integer, format: int64 }
+        note: { type: number }
+        commentaire: { type: string }
+        evaluateur: { type: string }
+        creeLe: { type: string, format: date-time }
+    Operation:
+      type: object
+      properties:
+        operation: { type: string, enum: [CREATION, CHANGEMENT_STATUT, COMPTE_RENDU, EVALUATION] }
+        detail: { type: string }
+        date: { type: string, format: date-time }
+        acteur: { type: string }
+    Erreur:
+      type: object
+      required: [code, message, details, timestamp, path]
+      properties:
+        code: { type: string, example: TRANSITION_INTERDITE }
+        message: { type: string, example: Le passage du statut TERMINE au statut EN_COURS n'est pas autorisé. }
+        details: { type: array, items: { type: string } }
+        timestamp: { type: string, format: date-time }
+        path: { type: string, example: /api/v1/stages/2/statut }

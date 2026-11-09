@@ -52,6 +52,20 @@ CREATE TABLE candidature_historique (
 );
 CREATE INDEX idx_historique_candidature ON candidature_historique (candidature_id, date_changement);
 
+-- Journal des étapes du processus, par soumission : alimente la vue BPMN en direct du portail.
+-- En mode direct, S4 l'écrit lui-même ; en mode bonita, le processus l'alimente par POST /soumissions/{id}/etapes.
+CREATE TABLE etape_processus (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  soumission_id BIGINT NOT NULL,
+  etape         VARCHAR(40) NOT NULL,
+  resultat      ENUM('OK','REJET','ECHEC','INFO') NOT NULL,
+  detail        VARCHAR(500) NULL,
+  date_etape    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  acteur        VARCHAR(120) NOT NULL,
+  CONSTRAINT fk_etape_soumission FOREIGN KEY (soumission_id) REFERENCES soumission (id) ON DELETE CASCADE
+);
+CREATE INDEX idx_etape_soumission ON etape_processus (soumission_id, date_etape);
+
 -- Scénarios (voir docs/SCENARIOS_DEMO.md) :
 -- candidature 1 prépare le rejet R5 ; candidatures 2 à 6 donnent 5 candidatures actives pour le rejet R6.
 INSERT INTO candidature (id, etudiant_id, offre_id, entreprise_id, lettre_motivation, score_competences, statut, cree_le) VALUES
@@ -93,3 +107,41 @@ INSERT INTO candidature_historique (candidature_id, ancien_statut, nouveau_statu
 (12,NULL,'DEPOSEE',DATE_SUB(NOW(), INTERVAL 15 DAY),'etudiant:19','Candidature enregistrée'),
 (12,'DEPOSEE','EN_COURS_EVALUATION',DATE_SUB(NOW(), INTERVAL 14 DAY),'entreprise:2','Évaluation démarrée'),
 (12,'EN_COURS_EVALUATION','ACCEPTEE',DATE_SUB(NOW(), INTERVAL 10 DAY),'entreprise:2','Profil retenu');
+
+-- Chaque candidature de démonstration a sa soumission et ses étapes, comme si elle était passée par le processus.
+INSERT INTO soumission (id, etudiant_id, offre_id, lettre_motivation, statut, cree_le)
+SELECT id, etudiant_id, offre_id, lettre_motivation, 'ENREGISTREE', cree_le FROM candidature ORDER BY id;
+UPDATE candidature SET soumission_id = id;
+
+INSERT INTO etape_processus (soumission_id, etape, resultat, detail, date_etape, acteur)
+SELECT c.id, e.etape, 'OK', e.detail, DATE_ADD(c.cree_le, INTERVAL e.ordre SECOND), 'processus'
+FROM candidature c
+CROSS JOIN (
+  SELECT 1 AS ordre, 'RECEPTION' AS etape, 'Candidature reçue' AS detail UNION ALL
+  SELECT 2, 'VERIFICATION_ETUDIANT', 'Étudiant actif (R1)' UNION ALL
+  SELECT 3, 'VERIFICATION_OFFRE', 'Offre active, entreprise active, profil compatible (R2, R7)' UNION ALL
+  SELECT 4, 'CONTROLE_CANDIDATURE', 'Date limite, places, doublon et limite de 5 respectés (R3 à R6)' UNION ALL
+  SELECT 5, 'PASSERELLE_DECISION', 'Conditions satisfaites' UNION ALL
+  SELECT 6, 'ENREGISTREMENT', 'Candidature enregistrée' UNION ALL
+  SELECT 7, 'NOTIFICATION_DEPOT', 'Confirmation envoyée à l''étudiant' UNION ALL
+  SELECT 8, 'TRANSMISSION_ENTREPRISE', 'Entreprise informée'
+) e;
+
+-- Étapes postérieures, reprises de l'historique des statuts.
+INSERT INTO etape_processus (soumission_id, etape, resultat, detail, date_etape, acteur)
+SELECT h.candidature_id,
+       CASE h.nouveau_statut WHEN 'EN_COURS_EVALUATION' THEN 'DEBUT_EVALUATION' WHEN 'ANNULEE' THEN 'ANNULATION' ELSE 'DECISION_ENTREPRISE' END,
+       IF(h.nouveau_statut = 'ANNULEE', 'INFO', 'OK'), h.commentaire, h.date_changement, h.acteur
+FROM candidature_historique h WHERE h.ancien_statut IS NOT NULL;
+
+INSERT INTO etape_processus (soumission_id, etape, resultat, detail, date_etape, acteur)
+SELECT h.candidature_id, e.etape, 'OK', e.detail, DATE_ADD(h.date_changement, INTERVAL e.ordre SECOND), 'processus'
+FROM candidature_historique h
+JOIN (
+  SELECT 'REFUSEE' AS statut, 1 AS ordre, 'NOTIFICATION_RESULTAT' AS etape, 'Refus notifié à l''étudiant' AS detail UNION ALL
+  SELECT 'ACCEPTEE', 1, 'MISE_A_JOUR_PLACES', 'Place retirée de l''offre (R10)' UNION ALL
+  SELECT 'ACCEPTEE', 2, 'NOTIFICATION_RESULTAT', 'Acceptation notifiée à l''étudiant' UNION ALL
+  SELECT 'ACCEPTEE', 3, 'CREATION_STAGE', 'Dossier de stage créé (R10)' UNION ALL
+  SELECT 'ACCEPTEE', 4, 'MISE_A_JOUR_ETUDIANT', 'Étudiant passé EN_STAGE (R10)'
+) e ON e.statut = h.nouveau_statut;
+

@@ -5,7 +5,11 @@ import java.util.List;
 /** Erreur prévue par le métier. Chaque service la traduit en faute SOAP typée ou en réponse HTTP. */
 public final class ErreurMetier extends RuntimeException {
 
-    public enum Type { INTROUVABLE, DONNEES_INVALIDES, CONFLIT, INDISPONIBLE }
+    /**
+     * Correspondance HTTP : INTROUVABLE 404, REQUETE_INVALIDE 400 (requête mal formée), DONNEES_INVALIDES 422
+     * (requête lisible mais contraire aux règles de format), INTERDIT 403, CONFLIT 409, INDISPONIBLE 503.
+     */
+    public enum Type { INTROUVABLE, REQUETE_INVALIDE, DONNEES_INVALIDES, INTERDIT, CONFLIT, INDISPONIBLE }
 
     private final Type type;
     private final String code;
@@ -24,6 +28,14 @@ public final class ErreurMetier extends RuntimeException {
 
     public static ErreurMetier donneesInvalides(String code, String message, List<String> details) {
         return new ErreurMetier(Type.DONNEES_INVALIDES, code, message, details);
+    }
+
+    public static ErreurMetier requeteInvalide(String message, List<String> details) {
+        return new ErreurMetier(Type.REQUETE_INVALIDE, "REQUETE_INVALIDE", message, details);
+    }
+
+    public static ErreurMetier interdit(String code, String message) {
+        return new ErreurMetier(Type.INTERDIT, code, message, List.of());
     }
 
     public static ErreurMetier conflit(String code, String message) {

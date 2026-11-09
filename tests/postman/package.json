@@ -1,0 +1,9 @@
+{
+  "name": "stages-soa-tests-postman",
+  "private": true,
+  "description": "Outil de lancement de la collection Postman en ligne de commande (Newman).",
+  "devDependencies": {
+    "newman": "6.2.1",
+    "newman-reporter-htmlextra": "1.23.1"
+  }
+}

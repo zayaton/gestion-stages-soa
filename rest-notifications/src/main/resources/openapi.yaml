@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: S5 Notifications
+  version: "1.0"
+  description: |
+    Envoie les courriels de la plateforme (gabarits HTML en français) et conserve chaque notification
+    avec son statut : `ENVOYEE` ou `ECHEC`. En démonstration, les courriels arrivent dans Mailpit (http://localhost:8025).
+
+    **Sécurité** : chaque appel porte l'en-tête `X-API-Key`. Sans clé valide : 401.
+    `POST /notifications` est réservé au processus et aux services (`bonita`, `services`, `postman`) ;
+    `POST /rappels/executer` au portail et aux services (`portail`, `services`, `postman`). Autre client : 403.
+
+    **Échec d'envoi** : si le serveur SMTP ne répond pas, la notification est tout de même enregistrée
+    (statut `ECHEC`, motif dans `erreur`) et la réponse reste 201 : l'envoi d'un courriel ne bloque jamais le processus.
+servers:
+  - url: http://localhost:8085
+security:
+  - CleApi: []
+tags:
+  - name: Notifications
+  - name: Rappels
+paths:
+  /api/v1/notifications:
+    post:
+      tags: [Notifications]
+      summary: Envoyer une notification
+      description: |
+        Le type choisit le gabarit ; `variables` le remplit. Variables obligatoires (facultatives entre parenthèses) :
+
+        | Type | Variables |
+        |---|---|
+        | CONFIRMATION_DEPOT | nomEtudiant, titreOffre, entreprise |
+        | CANDIDATURE_REJETEE | nomEtudiant, titreOffre, motif (regle) |
+        | ACCEPTATION | nomEtudiant, titreOffre, entreprise (commentaire) |
+        | REFUS | nomEtudiant, titreOffre, entreprise (commentaire) |
+        | DEMANDE_COMPLEMENT | nomEtudiant, titreOffre, entreprise, commentaire |
+        | NOUVELLE_CANDIDATURE_ENTREPRISE | entreprise, titreOffre, nomEtudiant, filiere, niveau (score) |
+        | RAPPEL_DATE_LIMITE | nomEtudiant, titreOffre, entreprise, dateLimite |
+        | ALERTE_RESPONSABLE | etape, erreur (reference) |
+
+        Une variable inconnue du gabarit est refusée (422), pour qu'une faute de frappe ne passe pas inaperçue.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NouvelleNotification' }
+            example:
+              type: CONFIRMATION_DEPOT
+              destinataire: salma.elidrissi@inpt.ac.ma
+              variables: { nomEtudiant: Salma El Idrissi, titreOffre: Stage AMOA – Paiement mobile, entreprise: NovaPay Maghreb }
+              candidatureId: 13
+              offreId: 1
+      responses:
+        '201': { description: Notification enregistrée (statut ENVOYEE ou ECHEC), headers: { Location: { schema: { type: string } } }, content: { application/json: { schema: { $ref: '#/components/schemas/Notification' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+    get:
+      tags: [Notifications]
+      summary: Lister les notifications
+      description: Les plus récentes d'abord. Filtres combinables.
+      parameters:
+        - { name: destinataire, in: query, schema: { type: string, format: email } }
+        - { name: candidatureId, in: query, schema: { type: integer, format: int64 } }
+        - { name: type, in: query, schema: { $ref: '#/components/schemas/TypeNotification' } }
+        - { name: limite, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+      responses:
+        '200': { description: Notifications, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Notification' } } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+  /api/v1/notifications/{id}:
+    get:
+      tags: [Notifications]
+      summary: Consulter une notification, avec le corps HTML envoyé
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }]
+      responses:
+        '200': { description: Notification, content: { application/json: { schema: { $ref: '#/components/schemas/Notification' } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/rappels/executer:
+    post:
+      tags: [Rappels]
+      summary: Exécuter maintenant les rappels de date limite
+      description: |
+        Même traitement que le passage quotidien (08:00 par défaut). Pour chaque offre ouverte dont la date limite
+        tombe dans les `jours` prochains jours, un courriel est envoyé à chaque étudiant ACTIF dont la filière et le niveau
+        conviennent, et qui n'a pas de candidature non annulée à cette offre.
+
+        Les données viennent de S3, S1, S2 et S4 et sont toutes lues avant le premier envoi : si l'un de ces services
+        ne répond pas, la réponse est 503 et aucun courriel n'est envoyé. Un rappel déjà envoyé n'est jamais renvoyé.
+      parameters:
+        - { name: jours, in: query, schema: { type: integer, minimum: 0, maximum: 30, default: 3 } }
+      responses:
+        '200': { description: Bilan de l'exécution, content: { application/json: { schema: { $ref: '#/components/schemas/BilanRappels' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '503': { $ref: '#/components/responses/Indisponible' }
+components:
+  securitySchemes:
+    CleApi: { type: apiKey, in: header, name: X-API-Key }
+  responses:
+    RequeteInvalide: { description: Requête mal formée (JSON incorrect, champ ou paramètre invalide), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    NonAuthentifie: { description: En-tête X-API-Key absent ou clé inconnue, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Interdit: { description: Client non autorisé pour cette opération (ACCES_INTERDIT), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Introuvable: { description: Ressource inexistante, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    DonneesInvalides: { description: Type inconnu, variable manquante ou inconnue, adresse invalide (détails listés), content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+    Indisponible: { description: Base de données ou service source indisponible, content: { application/json: { schema: { $ref: '#/components/schemas/Erreur' } } } }
+  schemas:
+    TypeNotification:
+      type: string
+      enum: [CONFIRMATION_DEPOT, CANDIDATURE_REJETEE, ACCEPTATION, REFUS, DEMANDE_COMPLEMENT, NOUVELLE_CANDIDATURE_ENTREPRISE, RAPPEL_DATE_LIMITE, ALERTE_RESPONSABLE]
+    NouvelleNotification:
+      type: object
+      required: [type, destinataire]
+      properties:
+        type: { $ref: '#/components/schemas/TypeNotification' }
+        destinataire: { type: string, format: email, maxLength: 150 }
+        variables: { type: object, additionalProperties: { type: string } }
+        candidatureId: { type: integer, format: int64, minimum: 1 }
+        offreId: { type: integer, format: int64, minimum: 1 }
+    Notification:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/TypeNotification' }
+        destinataire: { type: string }
+        sujet: { type: string }
+        corps: { type: string, description: Courriel HTML tel qu'envoyé }
+        dateEnvoi: { type: string, format: date-time }
+        statut: { type: string, enum: [ENVOYEE, ECHEC] }
+        erreur: { type: string, description: Motif de l'échec d'envoi }
+        candidatureId: { type: integer, format: int64 }
+        offreId: { type: integer, format: int64 }
+        correlationId: { type: string }
+    BilanRappels:
+      type: object
+      properties:
+        joursAvantLimite: { type: integer }
+        offresConcernees: { type: integer }
+        rappelsEnvoyes: { type: integer }
+        dejaEnvoyes: { type: integer }
+        echecs: { type: integer }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              offreId: { type: integer, format: int64 }
+              titreOffre: { type: string }
+              destinataire: { type: string }
+              resultat: { type: string, enum: [ENVOYEE, ECHEC, DEJA_ENVOYE] }
+    Erreur:
+      type: object
+      required: [code, message, details, timestamp, path]
+      properties:
+        code: { type: string, example: DONNEES_INVALIDES }
+        message: { type: string }
+        details: { type: array, items: { type: string } }
+        timestamp: { type: string, format: date-time }
+        path: { type: string }

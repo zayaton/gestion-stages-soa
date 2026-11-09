@@ -18,22 +18,6 @@ function Find-TestRunner {
 
 $script:echecs = 0
 
-# Lance un programme, attend au plus $DelaiSecondes, et renvoie son code de sortie (-1 si le délai est dépassé).
-# On n'utilise pas Start-Process -Wait : sous Windows PowerShell, il attend aussi tous les processus lancés
-# par l'enfant. Après start-all.ps1, ce sont les services eux-mêmes, qui ne s'arrêtent jamais : -Wait
-# bloquait le script indéfiniment (incident du 08/11, voir docs/JOURNAL.md).
-function Invoke-ProcessusLimite([string]$Programme, [string[]]$Arguments, [string]$Dossier, [string]$Sortie, [int]$DelaiSecondes, [switch]$ArbreComplet) {
-    # Start-Process ne protège pas les arguments : chacun est mis entre guillemets ici.
-    $liste = @($Arguments | ForEach-Object { '"' + $_ + '"' })
-    $p = Start-Process -FilePath $Programme -ArgumentList $liste -WorkingDirectory $Dossier -WindowStyle Hidden -PassThru `
-        -RedirectStandardOutput $Sortie -RedirectStandardError "$Sortie.err"
-    $null = $p.Handle   # sans cette lecture, Windows PowerShell 5.1 ne restitue pas le code de sortie
-    if ($p.WaitForExit($DelaiSecondes * 1000)) { return $p.ExitCode }
-    # Délai dépassé : on arrête le processus (et ses enfants pour SoapUI, qui lance Java depuis un .bat).
-    if ($ArbreComplet) { & taskkill.exe /T /F /PID $p.Id *> $null } else { Stop-Process -Id $p.Id -Force -Confirm:$false }
-    return -1
-}
-
 function Invoke-Suite([string]$Suite) {
     $dossier = Join-Path $rapports ($Suite -replace '[^A-Za-z0-9]', '_')
     New-Item -ItemType Directory -Force -Path "$dossier" | Out-Null

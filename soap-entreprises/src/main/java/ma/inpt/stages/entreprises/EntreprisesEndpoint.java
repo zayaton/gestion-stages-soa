@@ -114,9 +114,10 @@ public class EntreprisesEndpoint implements EntreprisesPortType {
             info.getDetail().addAll(e.details());
             switch (e.type()) {
                 case INTROUVABLE -> throw new EntrepriseIntrouvableFault(e.getMessage(), info);
-                case DONNEES_INVALIDES -> throw new DonneesInvalidesFault(e.getMessage(), info);
+                case DONNEES_INVALIDES, REQUETE_INVALIDE -> throw new DonneesInvalidesFault(e.getMessage(), info);
                 case CONFLIT -> throw new ConflitFault(e.getMessage(), info);
-                default -> throw new ServiceIndisponibleFault(e.getMessage(), info);
+                case INDISPONIBLE -> throw new ServiceIndisponibleFault(e.getMessage(), info);
+                default -> throw new ErreurInterneFault(e.getMessage(), info);
             }
         } catch (RuntimeException e) {
             LOG.error("Erreur inattendue", e);

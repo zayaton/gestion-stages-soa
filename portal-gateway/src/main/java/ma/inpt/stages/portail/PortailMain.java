@@ -21,7 +21,7 @@ public final class PortailMain {
         int port = config.entier("portail.port");
         BaseDeDonnees base = BaseDeDonnees.depuis(config, "portail");
         VerificateurSante sante = new VerificateurSante(NOM, base::estDisponible);
-        ServeurRest serveur = new ServeurRest(hote, port, new ResourceConfig(), sante);
+        ServeurRest serveur = new ServeurRest(hote, port, new ResourceConfig(), sante, null);
         Lanceur.arretPropre(serveur, base);
         serveur.demarrer();
         Lanceur.annoncer(NOM, hote, port);
