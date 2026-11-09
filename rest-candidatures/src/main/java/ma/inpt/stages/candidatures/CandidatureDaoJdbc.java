@@ -98,6 +98,17 @@ public final class CandidatureDaoJdbc implements CandidatureDao {
     }
 
     @Override
+    public void definirCasBonita(long soumissionId, long casId) {
+        try (Connection c = source.connexion(); PreparedStatement p = c.prepareStatement("UPDATE soumission SET bonita_case_id = ? WHERE id = ?")) {
+            p.setLong(1, casId);
+            p.setLong(2, soumissionId);
+            p.executeUpdate();
+        } catch (SQLException e) {
+            throw Sql.indisponible(e);
+        }
+    }
+
+    @Override
     public void ajouterEtape(long soumissionId, String etape, String resultat, String detail, String acteur) {
         try (Connection c = source.connexion();
              PreparedStatement p = c.prepareStatement("INSERT INTO etape_processus (soumission_id, etape, resultat, detail, acteur) VALUES (?,?,?,?,?)")) {

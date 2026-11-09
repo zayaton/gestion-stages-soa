@@ -184,23 +184,10 @@ public final class OrchestrateurDirect implements Orchestrateur {
 
     @Override
     public ResultatDecision decider(long candidatureId, Decision decision, String acteur) {
-        ServiceCandidatures.exiger(decision, "Une décision");
-        Validateur.verifier(decision);
+        valider(decision);
         String choix = decision.decision();
-        if (!List.of("ACCEPTER", "REFUSER", "DEMANDER_COMPLEMENT").contains(choix)) {
-            throw ErreurMetier.donneesInvalides("DONNEES_INVALIDES", "Les données transmises sont invalides.",
-                    List.of("La décision doit être ACCEPTER, REFUSER ou DEMANDER_COMPLEMENT."));
-        }
         String commentaire = decision.commentaire() == null ? null : decision.commentaire().trim();
-        if ("DEMANDER_COMPLEMENT".equals(choix) && (commentaire == null || commentaire.isEmpty())) {
-            throw ErreurMetier.donneesInvalides("DONNEES_INVALIDES", "Les données transmises sont invalides.",
-                    List.of("Une demande de complément doit préciser l'information attendue (commentaire)."));
-        }
-        Candidature c = service.consulter(candidatureId);
-        if (!"EN_COURS_EVALUATION".equals(c.statut())) {
-            throw ErreurMetier.conflit("DECISION_IMPOSSIBLE", "Une décision ne peut être prise que sur une candidature en cours d'évaluation "
-                    + "(statut actuel : " + c.statut() + ")." + ("DEPOSEE".equals(c.statut()) ? " Démarrez d'abord l'évaluation." : ""));
-        }
+        Candidature c = enEvaluation(service, candidatureId);
         // Données utiles aux notifications : lues avant tout changement, pour qu'une panne ne laisse rien à moitié fait.
         EtatEtudiant etudiant = partenaires.etudiant(c.etudiantId());
         EtatOffre offre = partenaires.offre(c.offreId());
@@ -235,6 +222,35 @@ public final class OrchestrateurDirect implements Orchestrateur {
             }
         }
         return new ResultatDecision(service.consulter(c.id()), etapes);
+    }
+
+    /** Règles communes aux deux modes : décision connue, complément motivé. */
+    static void valider(Decision decision) {
+        ServiceCandidatures.exiger(decision, "Une décision");
+        Validateur.verifier(decision);
+        if (!List.of("ACCEPTER", "REFUSER", "DEMANDER_COMPLEMENT").contains(decision.decision())) {
+            throw ErreurMetier.donneesInvalides("DONNEES_INVALIDES", "Les données transmises sont invalides.",
+                    List.of("La décision doit être ACCEPTER, REFUSER ou DEMANDER_COMPLEMENT."));
+        }
+        if ("DEMANDER_COMPLEMENT".equals(decision.decision()) && (decision.commentaire() == null || decision.commentaire().isBlank())) {
+            throw ErreurMetier.donneesInvalides("DONNEES_INVALIDES", "Les données transmises sont invalides.",
+                    List.of("Une demande de complément doit préciser l'information attendue (commentaire)."));
+        }
+    }
+
+    /** Une décision ne porte que sur une candidature en cours d'évaluation. */
+    static Candidature enEvaluation(ServiceCandidatures service, long candidatureId) {
+        Candidature c = service.consulter(candidatureId);
+        if (!"EN_COURS_EVALUATION".equals(c.statut())) {
+            throw ErreurMetier.conflit("DECISION_IMPOSSIBLE", "Une décision ne peut être prise que sur une candidature en cours d'évaluation "
+                    + "(statut actuel : " + c.statut() + ")." + ("DEPOSEE".equals(c.statut()) ? " Démarrez d'abord l'évaluation." : ""));
+        }
+        return c;
+    }
+
+    /** Alerte au responsable, sans jamais faire échouer l'appelant. */
+    void alerterResponsable(String etape, String erreur, String reference) {
+        alerter(etape, erreur, reference);
     }
 
     private static String suffixe(String commentaire) {
@@ -275,6 +291,11 @@ public final class OrchestrateurDirect implements Orchestrateur {
         EtatOffre offre = partenaires.offre(c.offreId());
         EtatEntreprise entreprise = partenaires.entreprise(c.entrepriseId());
         return new ResultatDecision(c, suivi(c, offre, entreprise));
+    }
+
+    @Override
+    public String mode() {
+        return "direct";
     }
 
     @Override

@@ -22,6 +22,9 @@ public interface Orchestrateur {
     /** Rejoue les étapes de suivi d'une candidature acceptée qui avaient échoué (stage, statut de l'étudiant). */
     ResultatDecision reprendreSuivi(long candidatureId, String acteur);
 
+    /** « direct » ou « bonita ». */
+    String mode();
+
     /** Annulation par l'étudiant (R8). */
     Candidature annuler(long candidatureId, String acteur);
 }

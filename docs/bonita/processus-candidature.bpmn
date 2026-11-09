@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Candidature" targetNamespace="http://stages.inpt.ma/bpmn" exporter="generer_bpmn.py" exporterVersion="1.0">
+  <bpmn:error id="ERREUR_SERVICE" name="Service indisponible" errorCode="SERVICE_INDISPONIBLE"/>
+  <bpmn:collaboration id="Collaboration_Candidature">
+    <bpmn:participant id="POOL_CANDIDATURE" name="Traitement d'une candidature" processRef="Candidature"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Candidature" name="Candidature" isExecutable="true">
+    <bpmn:documentation>Processus « Candidature » version 1.0. Contrat d'instanciation : soumissionId, etudiantId, offreId, lettreMotivation. Variable de processus unique : dossier (java.util.Map).</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_Candidature">
+      <bpmn:lane id="COULOIR_ETUDIANT" name="Étudiant">
+        <bpmn:flowNodeRef>RECEPTION</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="COULOIR_SYSTEME" name="Système">
+        <bpmn:flowNodeRef>VERIFICATION_ETUDIANT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_ETUDIANT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>VERIFICATION_OFFRE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_OFFRE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>VERIFICATION_ENTREPRISE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CONTROLE_CANDIDATURE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>PASSERELLE_DECISION</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ENREGISTREMENT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>NOTIFICATION_DEPOT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TRANSMISSION_ENTREPRISE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ENREGISTREMENT_REJET</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>NOTIFICATION_REJET</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>FIN_REJET</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>DEMANDE_COMPLEMENT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MISE_A_JOUR_PLACES</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ENREGISTREMENT_ACCEPTATION</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>NOTIFICATION_RESULTAT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CREATION_STAGE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MISE_A_JOUR_ETUDIANT</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>FIN_ACCEPTEE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ENREGISTREMENT_REFUS</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>NOTIFICATION_REFUS</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>FIN_REFUSEE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SP_ERREUR</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="COULOIR_ENTREPRISE" name="Entreprise">
+        <bpmn:flowNodeRef>DECISION_ENTREPRISE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>RELANCE_ENTREPRISE</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G_DECISION</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>MINUTEUR_RELANCE</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="RECEPTION" name="Candidature déposée">
+      <bpmn:outgoing>F_RECEPTION</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="VERIFICATION_ETUDIANT" name="Vérification de l'étudiant">
+      <bpmn:documentation>Étape 2. SOAP S1 verifierEtudiant (règle R1).</bpmn:documentation>
+      <bpmn:incoming>F_RECEPTION</bpmn:incoming>
+      <bpmn:outgoing>F_ETUDIANT</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_ETUDIANT" name="Étudiant éligible ?" default="F_ETUDIANT_NON">
+      <bpmn:incoming>F_ETUDIANT</bpmn:incoming>
+      <bpmn:outgoing>F_ETUDIANT_OUI</bpmn:outgoing>
+      <bpmn:outgoing>F_ETUDIANT_NON</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="VERIFICATION_OFFRE" name="Vérification de l'offre">
+      <bpmn:documentation>Étape 3. SOAP S3 verifierDisponibilite (offre existante et ACTIVE, règle R2).</bpmn:documentation>
+      <bpmn:incoming>F_ETUDIANT_OUI</bpmn:incoming>
+      <bpmn:outgoing>F_OFFRE</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_OFFRE" name="Offre existante et active ?" default="F_OFFRE_NON">
+      <bpmn:incoming>F_OFFRE</bpmn:incoming>
+      <bpmn:outgoing>F_OFFRE_OUI</bpmn:outgoing>
+      <bpmn:outgoing>F_OFFRE_NON</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="VERIFICATION_ENTREPRISE" name="Vérification de l'entreprise et du profil">
+      <bpmn:documentation>Étape 3. SOAP S3 consulterOffre, SOAP S2 verifierEntreprise (R2), SOAP S3 verifierCompatibilite (R7).</bpmn:documentation>
+      <bpmn:incoming>F_OFFRE_OUI</bpmn:incoming>
+      <bpmn:outgoing>F_ENTREPRISE</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="CONTROLE_CANDIDATURE" name="Contrôle de la candidature">
+      <bpmn:documentation>Étape 4. R3 et R4 d'après S3 ; REST S4 vérification de doublon (R5) et compte des candidatures actives (R6).</bpmn:documentation>
+      <bpmn:incoming>F_ENTREPRISE</bpmn:incoming>
+      <bpmn:outgoing>F_CONTROLE</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="PASSERELLE_DECISION" name="Conditions satisfaites ?" default="F_PASSERELLE_NON">
+      <bpmn:documentation>Étape 5. Passerelle de décision : candidature enregistrée si aucune règle n'est violée, sinon rejetée.</bpmn:documentation>
+      <bpmn:incoming>F_ETUDIANT_NON</bpmn:incoming>
+      <bpmn:incoming>F_OFFRE_NON</bpmn:incoming>
+      <bpmn:incoming>F_CONTROLE</bpmn:incoming>
+      <bpmn:outgoing>F_PASSERELLE_OUI</bpmn:outgoing>
+      <bpmn:outgoing>F_PASSERELLE_NON</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="ENREGISTREMENT" name="Enregistrement de la candidature">
+      <bpmn:documentation>Étape 5. REST S4 POST /candidatures.</bpmn:documentation>
+      <bpmn:incoming>F_PASSERELLE_OUI</bpmn:incoming>
+      <bpmn:outgoing>F_ENREGISTREMENT</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="NOTIFICATION_DEPOT" name="Confirmation du dépôt">
+      <bpmn:documentation>REST S5 : confirmation de dépôt à l'étudiant.</bpmn:documentation>
+      <bpmn:incoming>F_ENREGISTREMENT</bpmn:incoming>
+      <bpmn:outgoing>F_DEPOT</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="TRANSMISSION_ENTREPRISE" name="Transmission à l'entreprise">
+      <bpmn:documentation>Étape 6. REST S5 : l'entreprise est informée de la nouvelle candidature.</bpmn:documentation>
+      <bpmn:incoming>F_DEPOT</bpmn:incoming>
+      <bpmn:outgoing>F_TRANSMISSION</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="ENREGISTREMENT_REJET" name="Enregistrement du rejet">
+      <bpmn:documentation>REST S4 POST /soumissions/{id}/rejet (règle et motif).</bpmn:documentation>
+      <bpmn:incoming>F_PASSERELLE_NON</bpmn:incoming>
+      <bpmn:outgoing>F_REJET</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="NOTIFICATION_REJET" name="Notification du rejet">
+      <bpmn:documentation>REST S5 : rejet notifié à l'étudiant, avec le motif.</bpmn:documentation>
+      <bpmn:incoming>F_REJET</bpmn:incoming>
+      <bpmn:outgoing>F_NOTIF_REJET</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="FIN_REJET" name="Candidature rejetée">
+      <bpmn:incoming>F_NOTIF_REJET</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="DECISION_ENTREPRISE" name="Décision de l'entreprise">
+      <bpmn:documentation>Étape 7. Tâche humaine, contrat {decision : ACCEPTER | REFUSER | DEMANDER_COMPLEMENT, commentaire}.</bpmn:documentation>
+      <bpmn:incoming>F_TRANSMISSION</bpmn:incoming>
+      <bpmn:incoming>F_RETOUR_DECISION</bpmn:incoming>
+      <bpmn:incoming>F_RELANCE</bpmn:incoming>
+      <bpmn:outgoing>F_DECISION</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="RELANCE_ENTREPRISE" name="Relance de l'entreprise">
+      <bpmn:documentation>REST S5 : l'entreprise est relancée ; la tâche de décision est recréée.</bpmn:documentation>
+      <bpmn:incoming>F_MINUTEUR</bpmn:incoming>
+      <bpmn:outgoing>F_RELANCE</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="G_DECISION" name="Décision ?">
+      <bpmn:incoming>F_DECISION</bpmn:incoming>
+      <bpmn:outgoing>F_ACCEPTER</bpmn:outgoing>
+      <bpmn:outgoing>F_REFUSER</bpmn:outgoing>
+      <bpmn:outgoing>F_COMPLEMENT</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="DEMANDE_COMPLEMENT" name="Demande de complément">
+      <bpmn:documentation>Règle R11. REST S5 : demande de complément à l'étudiant, puis retour à la décision.</bpmn:documentation>
+      <bpmn:incoming>F_COMPLEMENT</bpmn:incoming>
+      <bpmn:outgoing>F_RETOUR_DECISION</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="MISE_A_JOUR_PLACES" name="Réservation de la place">
+      <bpmn:documentation>Étape 9, règle R10. SOAP S3 decrementerPlaces (POURVUE à zéro).</bpmn:documentation>
+      <bpmn:incoming>F_ACCEPTER</bpmn:incoming>
+      <bpmn:outgoing>F_PLACES</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="ENREGISTREMENT_ACCEPTATION" name="Enregistrement de l'acceptation">
+      <bpmn:documentation>REST S4 PATCH /candidatures/{id}/statut ACCEPTEE.</bpmn:documentation>
+      <bpmn:incoming>F_PLACES</bpmn:incoming>
+      <bpmn:outgoing>F_ACCEPTATION</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="NOTIFICATION_RESULTAT" name="Notification du résultat">
+      <bpmn:documentation>Étape 8. REST S5 : acceptation notifiée à l'étudiant.</bpmn:documentation>
+      <bpmn:incoming>F_ACCEPTATION</bpmn:incoming>
+      <bpmn:outgoing>F_RESULTAT</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="CREATION_STAGE" name="Création du dossier de stage">
+      <bpmn:documentation>Étape 9, règle R10. REST S6 POST /stages.</bpmn:documentation>
+      <bpmn:incoming>F_RESULTAT</bpmn:incoming>
+      <bpmn:outgoing>F_STAGE</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="MISE_A_JOUR_ETUDIANT" name="Mise à jour du statut de l'étudiant">
+      <bpmn:documentation>Étape 9, règle R10. SOAP S1 changerStatutEtudiant EN_STAGE.</bpmn:documentation>
+      <bpmn:incoming>F_STAGE</bpmn:incoming>
+      <bpmn:outgoing>F_EN_STAGE</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="FIN_ACCEPTEE" name="Candidature acceptée">
+      <bpmn:incoming>F_EN_STAGE</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="ENREGISTREMENT_REFUS" name="Enregistrement du refus">
+      <bpmn:documentation>REST S4 PATCH /candidatures/{id}/statut REFUSEE.</bpmn:documentation>
+      <bpmn:incoming>F_REFUSER</bpmn:incoming>
+      <bpmn:outgoing>F_REFUS</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="NOTIFICATION_REFUS" name="Notification du refus">
+      <bpmn:documentation>Étape 8. REST S5 : refus notifié à l'étudiant.</bpmn:documentation>
+      <bpmn:incoming>F_REFUS</bpmn:incoming>
+      <bpmn:outgoing>F_NOTIF_REFUS</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="FIN_REFUSEE" name="Candidature refusée">
+      <bpmn:incoming>F_NOTIF_REFUS</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="MINUTEUR_RELANCE" name="7 jours sans décision" attachedToRef="DECISION_ENTREPRISE" cancelActivity="true">
+      <bpmn:outgoing>F_MINUTEUR</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="Minuteur_7_jours">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="F_RECEPTION" sourceRef="RECEPTION" targetRef="VERIFICATION_ETUDIANT"/>
+    <bpmn:sequenceFlow id="F_ETUDIANT" sourceRef="VERIFICATION_ETUDIANT" targetRef="G_ETUDIANT"/>
+    <bpmn:sequenceFlow id="F_ETUDIANT_OUI" name="oui" sourceRef="G_ETUDIANT" targetRef="VERIFICATION_OFFRE">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="groovy">dossier.etudiantEligible == true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_ETUDIANT_NON" name="non" sourceRef="G_ETUDIANT" targetRef="PASSERELLE_DECISION"/>
+    <bpmn:sequenceFlow id="F_OFFRE" sourceRef="VERIFICATION_OFFRE" targetRef="G_OFFRE"/>
+    <bpmn:sequenceFlow id="F_OFFRE_OUI" name="oui" sourceRef="G_OFFRE" targetRef="VERIFICATION_ENTREPRISE">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="groovy">inpt.SoaProcessus.offreValable(dossier)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_OFFRE_NON" name="non" sourceRef="G_OFFRE" targetRef="PASSERELLE_DECISION"/>
+    <bpmn:sequenceFlow id="F_ENTREPRISE" sourceRef="VERIFICATION_ENTREPRISE" targetRef="CONTROLE_CANDIDATURE"/>
+    <bpmn:sequenceFlow id="F_CONTROLE" sourceRef="CONTROLE_CANDIDATURE" targetRef="PASSERELLE_DECISION"/>
+    <bpmn:sequenceFlow id="F_PASSERELLE_OUI" name="oui" sourceRef="PASSERELLE_DECISION" targetRef="ENREGISTREMENT">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="groovy">inpt.SoaProcessus.conditionsSatisfaites(dossier)</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_PASSERELLE_NON" name="non" sourceRef="PASSERELLE_DECISION" targetRef="ENREGISTREMENT_REJET"/>
+    <bpmn:sequenceFlow id="F_ENREGISTREMENT" sourceRef="ENREGISTREMENT" targetRef="NOTIFICATION_DEPOT"/>
+    <bpmn:sequenceFlow id="F_DEPOT" sourceRef="NOTIFICATION_DEPOT" targetRef="TRANSMISSION_ENTREPRISE"/>
+    <bpmn:sequenceFlow id="F_TRANSMISSION" sourceRef="TRANSMISSION_ENTREPRISE" targetRef="DECISION_ENTREPRISE"/>
+    <bpmn:sequenceFlow id="F_REJET" sourceRef="ENREGISTREMENT_REJET" targetRef="NOTIFICATION_REJET"/>
+    <bpmn:sequenceFlow id="F_NOTIF_REJET" sourceRef="NOTIFICATION_REJET" targetRef="FIN_REJET"/>
+    <bpmn:sequenceFlow id="F_DECISION" sourceRef="DECISION_ENTREPRISE" targetRef="G_DECISION"/>
+    <bpmn:sequenceFlow id="F_ACCEPTER" name="ACCEPTER" sourceRef="G_DECISION" targetRef="MISE_A_JOUR_PLACES">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="groovy">inpt.SoaProcessus.decisionEst(dossier, 'ACCEPTER')</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_REFUSER" name="REFUSER" sourceRef="G_DECISION" targetRef="ENREGISTREMENT_REFUS">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="groovy">inpt.SoaProcessus.decisionEst(dossier, 'REFUSER')</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_COMPLEMENT" name="DEMANDER_COMPLEMENT" sourceRef="G_DECISION" targetRef="DEMANDE_COMPLEMENT">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" language="groovy">inpt.SoaProcessus.decisionEst(dossier, 'DEMANDER_COMPLEMENT')</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_RETOUR_DECISION" name="R11 : retour à la décision" sourceRef="DEMANDE_COMPLEMENT" targetRef="DECISION_ENTREPRISE"/>
+    <bpmn:sequenceFlow id="F_MINUTEUR" sourceRef="MINUTEUR_RELANCE" targetRef="RELANCE_ENTREPRISE"/>
+    <bpmn:sequenceFlow id="F_RELANCE" sourceRef="RELANCE_ENTREPRISE" targetRef="DECISION_ENTREPRISE"/>
+    <bpmn:sequenceFlow id="F_PLACES" sourceRef="MISE_A_JOUR_PLACES" targetRef="ENREGISTREMENT_ACCEPTATION"/>
+    <bpmn:sequenceFlow id="F_ACCEPTATION" sourceRef="ENREGISTREMENT_ACCEPTATION" targetRef="NOTIFICATION_RESULTAT"/>
+    <bpmn:sequenceFlow id="F_RESULTAT" sourceRef="NOTIFICATION_RESULTAT" targetRef="CREATION_STAGE"/>
+    <bpmn:sequenceFlow id="F_STAGE" sourceRef="CREATION_STAGE" targetRef="MISE_A_JOUR_ETUDIANT"/>
+    <bpmn:sequenceFlow id="F_EN_STAGE" sourceRef="MISE_A_JOUR_ETUDIANT" targetRef="FIN_ACCEPTEE"/>
+    <bpmn:sequenceFlow id="F_REFUS" sourceRef="ENREGISTREMENT_REFUS" targetRef="NOTIFICATION_REFUS"/>
+    <bpmn:sequenceFlow id="F_NOTIF_REFUS" sourceRef="NOTIFICATION_REFUS" targetRef="FIN_REFUSEE"/>
+    <bpmn:subProcess id="SP_ERREUR" name="Gestion des erreurs techniques" triggeredByEvent="true">
+      <bpmn:documentation>Tout connecteur en échec lève l'erreur SERVICE_INDISPONIBLE : S4 marque la soumission ERREUR, le responsable est alerté.</bpmn:documentation>
+      <bpmn:startEvent id="ERREUR_TECHNIQUE" name="Service indisponible">
+        <bpmn:outgoing>F_ERREUR_1</bpmn:outgoing>
+        <bpmn:errorEventDefinition id="Capture_erreur_service" errorRef="ERREUR_SERVICE"/>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="SIGNALER_ERREUR" name="Signaler l'interruption">
+        <bpmn:incoming>F_ERREUR_1</bpmn:incoming>
+        <bpmn:outgoing>F_ERREUR_2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="ALERTE_RESPONSABLE" name="Alerter le responsable">
+        <bpmn:incoming>F_ERREUR_2</bpmn:incoming>
+        <bpmn:outgoing>F_ERREUR_3</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="FIN_ERREUR" name="Traitement interrompu">
+        <bpmn:incoming>F_ERREUR_3</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="F_ERREUR_1" sourceRef="ERREUR_TECHNIQUE" targetRef="SIGNALER_ERREUR"/>
+      <bpmn:sequenceFlow id="F_ERREUR_2" sourceRef="SIGNALER_ERREUR" targetRef="ALERTE_RESPONSABLE"/>
+      <bpmn:sequenceFlow id="F_ERREUR_3" sourceRef="ALERTE_RESPONSABLE" targetRef="FIN_ERREUR"/>
+    </bpmn:subProcess>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagramme_Candidature">
+    <bpmndi:BPMNPlane id="Plan_Candidature" bpmnElement="Collaboration_Candidature">
+      <bpmndi:BPMNShape id="POOL_CANDIDATURE_di" bpmnElement="POOL_CANDIDATURE" isHorizontal="true"><dc:Bounds x="0" y="0" width="2820" height="840"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="COULOIR_ETUDIANT_di" bpmnElement="COULOIR_ETUDIANT" isHorizontal="true"><dc:Bounds x="30" y="0" width="2790" height="180"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="COULOIR_SYSTEME_di" bpmnElement="COULOIR_SYSTEME" isHorizontal="true"><dc:Bounds x="30" y="180" width="2790" height="420"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="COULOIR_ENTREPRISE_di" bpmnElement="COULOIR_ENTREPRISE" isHorizontal="true"><dc:Bounds x="30" y="600" width="2790" height="240"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RECEPTION_di" bpmnElement="RECEPTION"><dc:Bounds x="92" y="72" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="50" y="112" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VERIFICATION_ETUDIANT_di" bpmnElement="VERIFICATION_ETUDIANT"><dc:Bounds x="200" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_ETUDIANT_di" bpmnElement="G_ETUDIANT" isMarkerVisible="true"><dc:Bounds x="385" y="225" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="350" y="279" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VERIFICATION_OFFRE_di" bpmnElement="VERIFICATION_OFFRE"><dc:Bounds x="480" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_OFFRE_di" bpmnElement="G_OFFRE" isMarkerVisible="true"><dc:Bounds x="665" y="225" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="630" y="279" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VERIFICATION_ENTREPRISE_di" bpmnElement="VERIFICATION_ENTREPRISE"><dc:Bounds x="770" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CONTROLE_CANDIDATURE_di" bpmnElement="CONTROLE_CANDIDATURE"><dc:Bounds x="930" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PASSERELLE_DECISION_di" bpmnElement="PASSERELLE_DECISION" isMarkerVisible="true"><dc:Bounds x="1115" y="225" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1080" y="279" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ENREGISTREMENT_di" bpmnElement="ENREGISTREMENT"><dc:Bounds x="1220" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NOTIFICATION_DEPOT_di" bpmnElement="NOTIFICATION_DEPOT"><dc:Bounds x="1370" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TRANSMISSION_ENTREPRISE_di" bpmnElement="TRANSMISSION_ENTREPRISE"><dc:Bounds x="1520" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ENREGISTREMENT_REJET_di" bpmnElement="ENREGISTREMENT_REJET"><dc:Bounds x="1220" y="350" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NOTIFICATION_REJET_di" bpmnElement="NOTIFICATION_REJET"><dc:Bounds x="1370" y="350" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FIN_REJET_di" bpmnElement="FIN_REJET"><dc:Bounds x="1542" y="362" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1500" y="402" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DECISION_ENTREPRISE_di" bpmnElement="DECISION_ENTREPRISE"><dc:Bounds x="1680" y="660" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RELANCE_ENTREPRISE_di" bpmnElement="RELANCE_ENTREPRISE"><dc:Bounds x="1560" y="760" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_DECISION_di" bpmnElement="G_DECISION" isMarkerVisible="true"><dc:Bounds x="1865" y="665" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1830" y="719" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DEMANDE_COMPLEMENT_di" bpmnElement="DEMANDE_COMPLEMENT"><dc:Bounds x="1970" y="490" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MISE_A_JOUR_PLACES_di" bpmnElement="MISE_A_JOUR_PLACES"><dc:Bounds x="1970" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ENREGISTREMENT_ACCEPTATION_di" bpmnElement="ENREGISTREMENT_ACCEPTATION"><dc:Bounds x="2120" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NOTIFICATION_RESULTAT_di" bpmnElement="NOTIFICATION_RESULTAT"><dc:Bounds x="2270" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CREATION_STAGE_di" bpmnElement="CREATION_STAGE"><dc:Bounds x="2420" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MISE_A_JOUR_ETUDIANT_di" bpmnElement="MISE_A_JOUR_ETUDIANT"><dc:Bounds x="2570" y="220" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FIN_ACCEPTEE_di" bpmnElement="FIN_ACCEPTEE"><dc:Bounds x="2732" y="232" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2690" y="272" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ENREGISTREMENT_REFUS_di" bpmnElement="ENREGISTREMENT_REFUS"><dc:Bounds x="1970" y="350" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NOTIFICATION_REFUS_di" bpmnElement="NOTIFICATION_REFUS"><dc:Bounds x="2120" y="350" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FIN_REFUSEE_di" bpmnElement="FIN_REFUSEE"><dc:Bounds x="2292" y="362" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="2250" y="402" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MINUTEUR_RELANCE_di" bpmnElement="MINUTEUR_RELANCE"><dc:Bounds x="1742" y="702" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1700" y="742" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SP_ERREUR_di" bpmnElement="SP_ERREUR" isExpanded="true"><dc:Bounds x="220" y="460" width="600" height="120"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ERREUR_TECHNIQUE_di" bpmnElement="ERREUR_TECHNIQUE"><dc:Bounds x="252" y="502" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="210" y="542" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SIGNALER_ERREUR_di" bpmnElement="SIGNALER_ERREUR"><dc:Bounds x="350" y="490" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ALERTE_RESPONSABLE_di" bpmnElement="ALERTE_RESPONSABLE"><dc:Bounds x="510" y="490" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="FIN_ERREUR_di" bpmnElement="FIN_ERREUR"><dc:Bounds x="702" y="502" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="660" y="542" width="120" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_RECEPTION_di" bpmnElement="F_RECEPTION"><di:waypoint x="128" y="90"/><di:waypoint x="260" y="90"/><di:waypoint x="260" y="220"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ETUDIANT_di" bpmnElement="F_ETUDIANT"><di:waypoint x="320" y="250"/><di:waypoint x="385" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ETUDIANT_OUI_di" bpmnElement="F_ETUDIANT_OUI"><di:waypoint x="435" y="250"/><di:waypoint x="480" y="250"/><bpmndi:BPMNLabel><dc:Bounds x="427" y="232" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ETUDIANT_NON_di" bpmnElement="F_ETUDIANT_NON"><di:waypoint x="410" y="275"/><di:waypoint x="410" y="330"/><di:waypoint x="1140" y="330"/><di:waypoint x="1140" y="275"/><bpmndi:BPMNLabel><dc:Bounds x="380" y="284" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_OFFRE_di" bpmnElement="F_OFFRE"><di:waypoint x="600" y="250"/><di:waypoint x="665" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_OFFRE_OUI_di" bpmnElement="F_OFFRE_OUI"><di:waypoint x="715" y="250"/><di:waypoint x="770" y="250"/><bpmndi:BPMNLabel><dc:Bounds x="712" y="232" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_OFFRE_NON_di" bpmnElement="F_OFFRE_NON"><di:waypoint x="690" y="225"/><di:waypoint x="690" y="196"/><di:waypoint x="1140" y="196"/><di:waypoint x="1140" y="225"/><bpmndi:BPMNLabel><dc:Bounds x="660" y="192" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ENTREPRISE_di" bpmnElement="F_ENTREPRISE"><di:waypoint x="890" y="250"/><di:waypoint x="930" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_CONTROLE_di" bpmnElement="F_CONTROLE"><di:waypoint x="1050" y="250"/><di:waypoint x="1115" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_PASSERELLE_OUI_di" bpmnElement="F_PASSERELLE_OUI"><di:waypoint x="1165" y="250"/><di:waypoint x="1220" y="250"/><bpmndi:BPMNLabel><dc:Bounds x="1162" y="232" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_PASSERELLE_NON_di" bpmnElement="F_PASSERELLE_NON"><di:waypoint x="1165" y="250"/><di:waypoint x="1190" y="250"/><di:waypoint x="1190" y="380"/><di:waypoint x="1220" y="380"/><bpmndi:BPMNLabel><dc:Bounds x="1147" y="232" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ENREGISTREMENT_di" bpmnElement="F_ENREGISTREMENT"><di:waypoint x="1340" y="250"/><di:waypoint x="1370" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_DEPOT_di" bpmnElement="F_DEPOT"><di:waypoint x="1490" y="250"/><di:waypoint x="1520" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_TRANSMISSION_di" bpmnElement="F_TRANSMISSION"><di:waypoint x="1640" y="250"/><di:waypoint x="1740" y="250"/><di:waypoint x="1740" y="660"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_REJET_di" bpmnElement="F_REJET"><di:waypoint x="1340" y="380"/><di:waypoint x="1370" y="380"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_NOTIF_REJET_di" bpmnElement="F_NOTIF_REJET"><di:waypoint x="1490" y="380"/><di:waypoint x="1542" y="380"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_DECISION_di" bpmnElement="F_DECISION"><di:waypoint x="1800" y="690"/><di:waypoint x="1865" y="690"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ACCEPTER_di" bpmnElement="F_ACCEPTER"><di:waypoint x="1890" y="665"/><di:waypoint x="1890" y="250"/><di:waypoint x="1970" y="250"/><bpmndi:BPMNLabel><dc:Bounds x="1860" y="439" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_REFUSER_di" bpmnElement="F_REFUSER"><di:waypoint x="1915" y="690"/><di:waypoint x="1940" y="690"/><di:waypoint x="1940" y="380"/><di:waypoint x="1970" y="380"/><bpmndi:BPMNLabel><dc:Bounds x="1897" y="672" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_COMPLEMENT_di" bpmnElement="F_COMPLEMENT"><di:waypoint x="1890" y="715"/><di:waypoint x="1890" y="745"/><di:waypoint x="2030" y="745"/><di:waypoint x="2030" y="550"/><bpmndi:BPMNLabel><dc:Bounds x="1860" y="712" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_RETOUR_DECISION_di" bpmnElement="F_RETOUR_DECISION"><di:waypoint x="1970" y="520"/><di:waypoint x="1760" y="520"/><di:waypoint x="1760" y="660"/><bpmndi:BPMNLabel><dc:Bounds x="1835" y="502" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_MINUTEUR_di" bpmnElement="F_MINUTEUR"><di:waypoint x="1760" y="738"/><di:waypoint x="1760" y="760"/><di:waypoint x="1680" y="790"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_RELANCE_di" bpmnElement="F_RELANCE"><di:waypoint x="1620" y="760"/><di:waypoint x="1620" y="690"/><di:waypoint x="1680" y="690"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_PLACES_di" bpmnElement="F_PLACES"><di:waypoint x="2090" y="250"/><di:waypoint x="2120" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ACCEPTATION_di" bpmnElement="F_ACCEPTATION"><di:waypoint x="2240" y="250"/><di:waypoint x="2270" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_RESULTAT_di" bpmnElement="F_RESULTAT"><di:waypoint x="2390" y="250"/><di:waypoint x="2420" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_STAGE_di" bpmnElement="F_STAGE"><di:waypoint x="2540" y="250"/><di:waypoint x="2570" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_EN_STAGE_di" bpmnElement="F_EN_STAGE"><di:waypoint x="2690" y="250"/><di:waypoint x="2732" y="250"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_REFUS_di" bpmnElement="F_REFUS"><di:waypoint x="2090" y="380"/><di:waypoint x="2120" y="380"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_NOTIF_REFUS_di" bpmnElement="F_NOTIF_REFUS"><di:waypoint x="2240" y="380"/><di:waypoint x="2292" y="380"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ERREUR_1_di" bpmnElement="F_ERREUR_1"><di:waypoint x="288" y="520"/><di:waypoint x="350" y="520"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ERREUR_2_di" bpmnElement="F_ERREUR_2"><di:waypoint x="470" y="520"/><di:waypoint x="510" y="520"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ERREUR_3_di" bpmnElement="F_ERREUR_3"><di:waypoint x="630" y="520"/><di:waypoint x="702" y="520"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

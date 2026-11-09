@@ -207,6 +207,18 @@ public final class ServiceCandidatures {
         return soumission(soumissionId);
     }
 
+    /** Interruption du processus Bonita (service indisponible) : la soumission passe ERREUR, l'étape est journalisée. */
+    public Soumission signalerErreur(long soumissionId, Modeles.ErreurProcessus erreur, String acteur) {
+        exiger(erreur, "Une erreur");
+        Validateur.verifier(erreur);
+        Soumission s = soumission(soumissionId);
+        if ("EN_TRAITEMENT".equals(s.statut())) {
+            dao.terminerSoumission(soumissionId, "ERREUR", null, erreur.motif());
+        }
+        dao.ajouterEtape(soumissionId, Etapes.ERREUR, "ECHEC", erreur.etape() + " : " + erreur.motif(), acteur);
+        return soumission(soumissionId);
+    }
+
     /** Rejet constaté par le processus Bonita à la passerelle de décision (règles R1 à R7). */
     public Soumission rejeter(long soumissionId, Rejet rejet, String acteur) {
         exiger(rejet, "Un rejet");

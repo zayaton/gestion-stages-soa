@@ -28,6 +28,9 @@ public interface CandidatureDao {
 
     void terminerSoumission(long id, String statut, String regle, String motif);
 
+    /** Numéro du cas Bonita qui traite la soumission (mode bonita). */
+    void definirCasBonita(long soumissionId, long casId);
+
     void ajouterEtape(long soumissionId, String etape, String resultat, String detail, String acteur);
 
     List<Etape> etapes(long soumissionId);

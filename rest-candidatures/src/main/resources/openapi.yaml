@@ -128,6 +128,38 @@ paths:
         '404': { $ref: '#/components/responses/Introuvable' }
         '409': { $ref: '#/components/responses/Conflit' }
         '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/soumissions/{id}/erreur:
+    post:
+      tags: [Processus]
+      summary: Signaler l'interruption du processus Bonita (service indisponible)
+      description: |
+        Clients autorisés `bonita`, `services`, `postman`. Appelé par le sous-processus d'erreur du processus Bonita :
+        la soumission encore EN_TRAITEMENT passe ERREUR, et l'étape ERREUR est journalisée (vue BPMN).
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Acteur' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [etape, motif]
+              properties:
+                etape: { type: string, maxLength: 100, example: "Vérification de l'étudiant" }
+                motif: { type: string, maxLength: 500, example: "Le service S1 ne répond pas." }
+      responses:
+        '200': { description: Soumission à jour, content: { application/json: { schema: { $ref: '#/components/schemas/Soumission' } } } }
+        '400': { $ref: '#/components/responses/RequeteInvalide' }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
+        '403': { $ref: '#/components/responses/Interdit' }
+        '404': { $ref: '#/components/responses/Introuvable' }
+        '422': { $ref: '#/components/responses/DonneesInvalides' }
+  /api/v1/processus/mode:
+    get:
+      tags: [Processus]
+      summary: Mode d'orchestration en service (bonita ou direct)
+      responses:
+        '200': { description: Mode, content: { application/json: { schema: { type: object, properties: { mode: { type: string, enum: [bonita, direct] } } } } } }
+        '401': { $ref: '#/components/responses/NonAuthentifie' }
   /api/v1/etudiants/{id}/soumissions:
     get:
       tags: [Processus]

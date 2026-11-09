@@ -103,3 +103,28 @@ function Invoke-ProcessusLimite([string]$Programme, [string[]]$Arguments, [strin
     if ($ArbreComplet) { & taskkill.exe /T /F /PID $p.Id *> $null } else { Stop-Process -Id $p.Id -Force -Confirm:$false }
     return -1
 }
+
+# Mode d'orchestration de S4 en service (« bonita », « direct »), ou $null si S4 ne répond pas.
+function Get-ModeOrchestration {
+    $port = ($Services | Where-Object { $_.Module -eq 'rest-candidatures' }).Port
+    try {
+        $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 -Uri "http://127.0.0.1:$port/api/v1/processus/mode" -Headers @{ 'X-API-Key' = 'cle-services-2026-Lk9TwQ' }
+        return (ConvertFrom-Json $r.Content).mode
+    } catch {
+        return $null
+    }
+}
+
+# Classpath Groovy 3.0.25 (version de Bonita Studio 2025.2), pour les scripts du processus hors de Bonita.
+function Get-ClasspathGroovy {
+    $racine = Join-Path $env:USERPROFILE '.m2\repository\org\codehaus\groovy'
+    $jars = foreach ($a in 'groovy', 'groovy-json', 'groovy-xml') {
+        $jar = Join-Path $racine "$a\3.0.25\$a-3.0.25.jar"
+        if (-not (Test-Path -LiteralPath $jar)) {
+            & mvn -q org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get "-Dartifact=org.codehaus.groovy:${a}:3.0.25" | Out-Null
+            if (-not (Test-Path -LiteralPath $jar)) { throw "Groovy 3.0.25 introuvable ($a) et téléchargement impossible." }
+        }
+        $jar
+    }
+    return (($jars + (Join-Path $RacineProjet 'docs\bonita\groovy')) -join ';')
+}

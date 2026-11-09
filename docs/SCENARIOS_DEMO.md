@@ -5,7 +5,7 @@ Les préconditions sont vérifiées par `scripts\verifier-socle.ps1`.
 
 Chaque scénario a son propre étudiant : le parcours nominal fait passer Salma El Idrissi `EN_STAGE`, elle ne peut donc plus servir aux autres démonstrations (règle R1).
 
-**Jouez les scénarios dans l'ordre du tableau** (c'est aussi l'ordre de la collection Postman). Par exemple, « R8 – annulation acceptée » annule la candidature de Youssef : jouée avant « R5 – doublon », elle lui permettrait de recandidater et le rejet R5 n'aurait plus lieu. En cas de doute : `.\scriptseset-db.ps1`.
+**Jouez les scénarios dans l'ordre du tableau** (c'est aussi l'ordre de la collection Postman). Par exemple, « R8 – annulation acceptée » annule la candidature de Youssef : jouée avant « R5 – doublon », elle lui permettrait de recandidater et le rejet R5 n'aurait plus lieu. En cas de doute : `.\scripts\reset-db.ps1`.
 
 Mots de passe : `Etudiant@2026` pour les étudiants, `Entreprise@2026` pour les entreprises, `Responsable@2026` pour le responsable (`responsable@inpt.ac.ma`).
 

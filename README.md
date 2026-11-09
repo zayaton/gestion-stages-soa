@@ -74,7 +74,11 @@ Chaque appel porte l'en-tête `X-API-Key` (une clé par client, 401 sans clé va
 
 Erreurs : corps JSON uniforme `{code, message, details, timestamp, path}`. Swagger UI fonctionne sans Internet : bouton « Authorize » pour saisir la clé.
 
-**Mode d'orchestration** (variable `ORCHESTRATION_MODE`) : `direct` pour l'instant ; `bonita` arrive avec le processus Bonita.
+**Mode d'orchestration** (variable `ORCHESTRATION_MODE`) :
+- `bonita` (par défaut) : le processus BPMN déployé dans Bonita Studio orchestre. Construction : [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md).
+- `direct` : S4 exécute les mêmes étapes en Java ; secours pour le développement et les tests automatiques.
+
+Choix au démarrage : `.\scripts\start-all.ps1 -Orchestration direct` (ou `bonita`). Si Bonita ne répond pas, `start-all` l'indique.
 
 ## Portail (port 8090)
 
@@ -96,12 +100,14 @@ clients SOAP générés par wsimport depuis les WSDL du dépôt, clients REST av
 .\scripts\start-all.ps1 -Rebuild
 .\scripts\verifier-socle.ps1       # socle et données de démonstration
 .\scripts\tests-soapui.ps1         # tests SoapUI, y compris de vraies pannes (S3, S1, MySQL)
+.\scripts\tests-postman.ps1        # collection Postman (Newman) : réinitialise les bases puis joue tous les scénarios
+.\scripts\test-bout-en-bout.ps1    # par le portail : tous les scénarios, courriels Mailpit, puis une vraie panne de S3
+.\scripts\test-bout-en-bout.ps1 -Orchestration simulation   # mêmes scénarios, S4 en mode bonita face au processus simulé
+.\scripts\test-bout-en-bout.ps1 -Orchestration bonita       # mêmes scénarios face au vrai Bonita (processus déployé)
 ```
 
 `tests-soapui.ps1`, `tests-postman.ps1` et `test-bout-en-bout.ps1` modifient les données : relancez `reset-db.ps1` avant une démonstration ou `verifier-socle.ps1`.
-La collection à importer dans Postman est `tests\postman\Stages-SOA.postman_collection.json`, avec l'environnement `Stages-SOA-local.postman_environment.json`. Rapport HTML de la dernière exécution : `tests\postman
-apports
-apport-newman.html`.
+La collection à importer dans Postman est `tests\postman\Stages-SOA.postman_collection.json`, avec l'environnement `Stages-SOA-local.postman_environment.json`. Rapport HTML de la dernière exécution : `tests\postman\rapports\rapport-newman.html`.
 Le projet SoapUI à ouvrir dans l'interface graphique est `tests\soapui\Stages-SOA-soapui-project.xml`.
 
 ## Comptes de démonstration

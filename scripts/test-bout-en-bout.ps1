@@ -1,7 +1,13 @@
 ﻿# Test de bout en bout par le portail : tous les scénarios (parcours nominal, R1 à R7, R8, R11, espace responsable),
 # puis une vraie panne (S3 arrêté). Vérifie les courriels dans Mailpit et la corrélation dans les journaux.
 # Prérequis : .\scripts\start-all.ps1. Le script réinitialise les bases et Mailpit avant de commencer.
-param([int]$DelaiSecondes = 240)
+# -Orchestration :
+#   direct     (défaut) S4 exécute les étapes du processus ;
+#   simulation S4 en mode bonita face au processus simulé (tests\bonita\SimulationBonita.groovy) : vérifie le pont S4-Bonita
+#              et les scripts Groovy livrés, sans Bonita Studio ;
+#   bonita     S4 face au vrai Bonita (processus déployé, voir docs\bonita\GUIDE_BONITA.md).
+# -Secours (avec simulation) : les tâches simulées utilisent le mode secours du guide (aucun connecteur).
+param([int]$DelaiSecondes = 300, [ValidateSet('direct', 'simulation', 'bonita')][string]$Orchestration = 'direct', [switch]$Secours)
 . "$PSScriptRoot\env.ps1"
 
 $script = Join-Path $RacineProjet 'tests\e2e\bout-en-bout.mjs'
@@ -37,6 +43,32 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'La réinitialisation des bases a échoué.' }
     Wait-Pile
 
+    $simulation = $null
+    if ($Orchestration -eq 'simulation') {
+        Write-Host '== Bonita simulé (port 8099) =='
+        Use-Jdk17
+        $classpath = Get-ClasspathGroovy
+        $env:SIMULATION_SECOURS = if ($Secours) { '1' } else { '0' }
+        $java = Join-Path $env:JAVA_HOME 'bin\java.exe'
+        $journalSimulation = Join-Path $rapports 'simulation.log'
+        $scriptSimulation = Join-Path $RacineProjet 'tests\bonita\SimulationBonita.groovy'
+        $simulation = Start-Process -FilePath $java -ArgumentList @('-Dfile.encoding=UTF-8', '-cp', "`"$classpath`"", 'groovy.ui.GroovyMain', "`"$scriptSimulation`"", '8099') `
+            -WorkingDirectory $RacineProjet -WindowStyle Hidden -PassThru -RedirectStandardOutput $journalSimulation -RedirectStandardError "$journalSimulation.err"
+        $limite = (Get-Date).AddSeconds(60)
+        while (-not (Select-String -LiteralPath $journalSimulation -Pattern 'Bonita simulé' -Quiet -ErrorAction SilentlyContinue) -and (Get-Date) -lt $limite) { Start-Sleep -Seconds 1 }
+        if (-not (Select-String -LiteralPath $journalSimulation -Pattern 'Bonita simulé' -Quiet -ErrorAction SilentlyContinue)) {
+            throw "La simulation de Bonita n'a pas démarré : $journalSimulation.err"
+        }
+        $env:BONITA_URL = 'http://localhost:8099/bonita'
+        Get-ProcessusService 'rest-candidatures' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -Confirm:$false }
+    }
+    $modeS4 = if ($Orchestration -eq 'direct') { 'direct' } else { 'bonita' }
+    & "$PSScriptRoot\start-all.ps1" -Orchestration $modeS4 *> $null
+    Wait-Pile
+    if ((Get-ModeOrchestration) -ne $modeS4) { throw "S4 n'est pas en mode $modeS4." }
+    $env:ORCHESTRATION = $modeS4
+    Write-Host "== Orchestration : $Orchestration =="
+
     $codeScenarios = Invoke-Node 'scenarios'
 
     Write-Host ''
@@ -49,6 +81,13 @@ try {
         $relance = Invoke-ProcessusLimite -Programme 'powershell.exe' -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$PSScriptRoot\start-all.ps1") `
             -Dossier $RacineProjet -Sortie (Join-Path $rapports 'redemarrage.txt') -DelaiSecondes 180
         if ($relance -ne 0) { Write-Host "Redémarrage incomplet : voir $rapports\redemarrage.txt" -ForegroundColor Red }
+        if ($simulation) {
+            # S4 quitte la simulation : il reprend l'adresse de Bonita de sa configuration.
+            Stop-Process -Id $simulation.Id -Force -Confirm:$false -ErrorAction SilentlyContinue
+            Remove-Item Env:BONITA_URL -ErrorAction SilentlyContinue
+            Get-ProcessusService 'rest-candidatures' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -Confirm:$false }
+            & "$PSScriptRoot\start-all.ps1" *> $null
+        }
     }
 
     Write-Host ''

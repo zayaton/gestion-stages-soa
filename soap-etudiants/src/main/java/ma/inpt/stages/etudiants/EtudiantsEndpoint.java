@@ -82,6 +82,8 @@ public class EtudiantsEndpoint implements EtudiantsPortType {
             x.setMotif(v.motif());
             x.setNomComplet(v.nomComplet());
             x.setEmail(v.email());
+            x.setFiliere(v.filiere());
+            x.setNiveau(v.niveau());
             return x;
         });
     }

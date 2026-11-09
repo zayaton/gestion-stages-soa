@@ -48,6 +48,9 @@ public final class ServeurRest implements AutoCloseable {
         ressources.register(Json.class);
         ressources.register(MappeurErreurs.class);
         ressources.register(FiltreCorrelation.class);
+        // PATCH par X-HTTP-Method-Override : HttpURLConnection (scripts Groovy de Bonita, mode secours) ne sait pas envoyer PATCH.
+        ressources.register(new org.glassfish.jersey.server.filter.HttpMethodOverrideFilter(
+                org.glassfish.jersey.server.filter.HttpMethodOverrideFilter.Source.HEADER));
         if (cles != null) {
             ressources.register(new FiltreSecurite.Authentification(cles));
             ressources.register(FiltreSecurite.Autorisation.class);

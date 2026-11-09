@@ -1,6 +1,8 @@
 // Test de bout en bout, par le portail uniquement (comme le ferait le navigateur), sur des données fraîches.
 // Lancé par scripts\test-bout-en-bout.ps1, qui réinitialise les bases, puis arrête S3 pour le mode « panne ».
 // Usage : node bout-en-bout.mjs scenarios | panne
+// Variable ORCHESTRATION : « direct » (résultats immédiats) ou « bonita » (le processus avance en arrière-plan :
+// le script attend chaque résultat). Les mêmes vérifications valent pour les deux modes.
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +11,8 @@ const PORTAIL = process.env.PORTAIL_URL || "http://localhost:8090";
 const MAILPIT = process.env.MAILPIT_URL || "http://localhost:8025/api/v1";
 const LOGS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "logs");
 const MDP = { ETUDIANT: "Etudiant@2026", ENTREPRISE: "Entreprise@2026", RESPONSABLE: "Responsable@2026" };
+const MODE = process.env.ORCHESTRATION || "direct";
+const ASYNCHRONE = MODE !== "direct";
 const LETTRE = "Je souhaite rejoindre votre équipe : ce stage correspond exactement à mon projet professionnel.";
 
 let reussis = 0;
@@ -46,15 +50,64 @@ async function connecter(identifiant, role) {
   return r.json.jeton;
 }
 
-async function sujetsRecus(adresse) {
-  const r = await fetch(`${MAILPIT}/search?query=${encodeURIComponent("to:" + adresse)}`, { signal: AbortSignal.timeout(10000) });
-  const j = await r.json();
-  return (j.messages || []).map(m => m.Subject);
+const pause = ms => new Promise(r => setTimeout(r, ms));
+
+/** Répète « lire » jusqu'à ce que « fini » soit vrai (mode bonita : le processus avance en arrière-plan). */
+async function attendre(lire, fini, delaiMs = 20000) {
+  const limite = Date.now() + delaiMs;
+  let valeur = await lire();
+  while (!fini(valeur) && Date.now() < limite) {
+    await pause(400);
+    valeur = await lire();
+  }
+  return valeur;
 }
 
-/** Dépôt par l'étudiant connecté ; renvoie la soumission. */
+/** Sujets reçus par une adresse ; si « attendu » est donné, attend qu'il arrive (le processus peut être en cours). */
+async function sujetsRecus(adresse, attendu) {
+  const lire = async () => {
+    const r = await fetch(`${MAILPIT}/search?query=${encodeURIComponent("to:" + adresse)}`, { signal: AbortSignal.timeout(10000) });
+    return ((await r.json()).messages || []).map(m => m.Subject);
+  };
+  return attendu ? attendre(lire, sujets => sujets.some(attendu)) : lire();
+}
+
+/** Dépôt par l'étudiant connecté. En mode bonita, attend la fin des étapes 2 à 6 et renvoie la soumission finale. */
 async function candidater(jeton, offreId, correlation) {
-  return appel("POST", "/api/etudiant/candidatures", { jeton, corps: { offreId, lettreMotivation: LETTRE }, correlation });
+  const r = await appel("POST", "/api/etudiant/candidatures", { jeton, corps: { offreId, lettreMotivation: LETTRE }, correlation });
+  if (!ASYNCHRONE || r.statut !== 202 || r.json?.statut !== "EN_TRAITEMENT") return r;
+  const id = r.json.id;
+  const final = await attendre(() => appel("GET", "/api/etudiant/candidatures", { jeton }), l => {
+    const c = l.json?.candidatures?.find(x => x.soumissionId === id);
+    const s = l.json?.soumissionsNonEnregistrees?.find(x => x.id === id);
+    return c || (s && s.statut !== "EN_TRAITEMENT");
+  });
+  const c = final.json?.candidatures?.find(x => x.soumissionId === id);
+  const s = final.json?.soumissionsNonEnregistrees?.find(x => x.id === id);
+  return { statut: r.statut, json: c ? { ...r.json, statut: "ENREGISTREE", candidatureId: c.id } : (s ?? r.json) };
+}
+
+/**
+ * Décision de l'entreprise. En mode bonita, la réponse arrive avant la fin des étapes 8 et 9 : on attend le statut final,
+ * et l'on relit les étapes exécutées par le processus depuis la décision.
+ */
+async function decider(jeton, id, corps, statutAttendu) {
+  let r = await appel("POST", `/api/entreprise/candidatures/${id}/decision`, { jeton, corps });
+  if (!ASYNCHRONE) return r;
+  // Après une demande de complément, la tâche de décision réapparaît dès que la notification est partie.
+  for (let i = 0; i < 25 && r.statut === 409 && r.json?.code === "DECISION_EN_COURS"; i++) {
+    await pause(400);
+    r = await appel("POST", `/api/entreprise/candidatures/${id}/decision`, { jeton, corps });
+  }
+  if (r.statut !== 200) return r;
+  const derniere = corps.decision === "ACCEPTER" ? "MISE_A_JOUR_ETUDIANT" : "NOTIFICATION_RESULTAT";
+  const detail = await attendre(() => appel("GET", `/api/entreprise/candidatures/${id}`, { jeton }), d => {
+    const e = d.json?.etapes ?? [];
+    const depuis = e.slice(e.map(x => x.etape).lastIndexOf("DECISION_ENTREPRISE"));
+    return d.json?.statut === statutAttendu && depuis.some(x => x.etape === derniere);
+  });
+  const e = detail.json?.etapes ?? [];
+  return { statut: r.statut, json: { candidature: { ...detail.json }, etapes: e.slice(e.map(x => x.etape).lastIndexOf("DECISION_ENTREPRISE")) } };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -99,7 +152,7 @@ async function scenarios() {
   const annul = await appel("DELETE", `/api/etudiant/candidatures/${idSalma}`, { jeton: salma });
   verifier("R8 : annulation refusée une fois l'évaluation commencée (409)", annul.statut === 409 && annul.json?.code === "ANNULATION_IMPOSSIBLE"
     && annul.json?.message.includes("R8"), JSON.stringify(annul.json));
-  const decision = await appel("POST", `/api/entreprise/candidatures/${idSalma}/decision`, { jeton: novapay, corps: { decision: "ACCEPTER", commentaire: "Profil retenu, bienvenue." } });
+  const decision = await decider(novapay, idSalma, { decision: "ACCEPTER", commentaire: "Profil retenu, bienvenue." }, "ACCEPTEE");
   verifier("Acceptation : candidature ACCEPTEE, toutes les étapes de suivi réussies (R10)", decision.json?.candidature?.statut === "ACCEPTEE"
     && decision.json?.etapes?.every(e => e.resultat === "OK"), JSON.stringify(decision.json?.etapes));
   const stages = await appel("GET", "/api/etudiant/stages", { jeton: salma });
@@ -110,14 +163,24 @@ async function scenarios() {
   verifier("Historique et étapes du processus visibles par l'étudiante", detail.json?.historique?.length === 3 && detail.json?.etapes?.length >= 13);
   const dossier = await appel("GET", `/api/responsable/candidatures/${idSalma}`, { jeton: responsable });
   verifier("Le responsable voit les coordonnées complètes et le stage", dossier.json?.etudiant?.email === "salma.elidrissi@inpt.ac.ma" && dossier.json?.stage?.id > 0);
-  const salmaSujets = await sujetsRecus("salma.elidrissi@inpt.ac.ma");
+  const salmaSujets = await sujetsRecus("salma.elidrissi@inpt.ac.ma", s => s.startsWith("Candidature retenue"));
   verifier("Mailpit : confirmation de dépôt reçue", salmaSujets.includes("Candidature enregistrée : Stage AMOA – Paiement mobile"), salmaSujets.join(" | "));
   verifier("Mailpit : acceptation reçue", salmaSujets.includes("Candidature retenue : Stage AMOA – Paiement mobile"));
   verifier("Mailpit : l'entreprise a été informée", (await sujetsRecus("contact@novapay-maghreb.ma")).includes("Nouvelle candidature : Stage AMOA – Paiement mobile"));
-  const avecCorrelation = readdirSync(LOGS).filter(f => f.endsWith(".log") && readFileSync(join(LOGS, f), "utf8").includes("e2e-parcours-nominal"));
-  verifier("Corrélation : le même identifiant dans les journaux du portail, de S1 à S5",
-    ["portal-gateway", "rest-candidatures", "soap-etudiants", "soap-entreprises", "soap-offres", "rest-notifications"].every(m => avecCorrelation.includes(m + ".log")),
-    avecCorrelation.join(", "));
+  const contient = id => readdirSync(LOGS).filter(f => f.endsWith(".log") && readFileSync(join(LOGS, f), "utf8").includes(id));
+  if (!ASYNCHRONE) {
+    const avecCorrelation = contient("e2e-parcours-nominal");
+    verifier("Corrélation : le même identifiant dans les journaux du portail, de S1 à S5",
+      ["portal-gateway", "rest-candidatures", "soap-etudiants", "soap-entreprises", "soap-offres", "rest-notifications"].every(m => avecCorrelation.includes(m + ".log")),
+      avecCorrelation.join(", "));
+  } else {
+    const portail = contient("e2e-parcours-nominal");
+    const processus = contient(`soumission-${depot.json?.id}`);
+    verifier("Corrélation : identifiant du portail jusqu'à S4, puis celui du cas Bonita de S1 à S6",
+      ["portal-gateway", "rest-candidatures"].every(m => portail.includes(m + ".log"))
+      && ["soap-etudiants", "soap-entreprises", "soap-offres", "rest-notifications", "rest-suivi"].every(m => processus.includes(m + ".log")),
+      `portail : ${portail.join(", ")} | processus : ${processus.join(", ")}`);
+  }
 
   section("3. Règles R1 à R7 : chaque étudiant depuis son propre compte");
   const cas = [
@@ -137,7 +200,7 @@ async function scenarios() {
     const r = await candidater(jeton, offre);
     verifier(`${regle} : ${compte.split("@")[0]}, offre ${offre} rejetée (« ${extrait} »)`,
       r.statut === 202 && r.json?.statut === "REJETEE" && r.json?.regleRejetee === regle && r.json?.motifRejet?.includes(extrait), JSON.stringify(r.json));
-    const sujets = await sujetsRecus(compte);
+    const sujets = await sujetsRecus(compte, s => s.startsWith("Candidature non recevable"));
     verifier(`${regle} : courriel de rejet reçu par ${compte.split("@")[0]}`, sujets.some(s => s.startsWith("Candidature non recevable")));
   }
   const aicha = await connecter("aicha.tahiri@inpt.ac.ma", "ETUDIANT");
@@ -157,13 +220,13 @@ async function scenarios() {
   const idMehdi = dm.json?.candidatureId;
   verifier("Mehdi candidate à l'offre 4", dm.json?.statut === "ENREGISTREE");
   await appel("POST", `/api/entreprise/candidatures/${idMehdi}/evaluation`, { jeton: detroit });
-  const complement = await appel("POST", `/api/entreprise/candidatures/${idMehdi}/decision`,
-    { jeton: detroit, corps: { decision: "DEMANDER_COMPLEMENT", commentaire: "Pouvez-vous préciser vos disponibilités à partir de février ?" } });
+  const complement = await decider(detroit, idMehdi,
+    { decision: "DEMANDER_COMPLEMENT", commentaire: "Pouvez-vous préciser vos disponibilités à partir de février ?" }, "EN_COURS_EVALUATION");
   verifier("R11 : la candidature reste EN_COURS_EVALUATION", complement.json?.candidature?.statut === "EN_COURS_EVALUATION");
-  verifier("R11 : l'étudiant reçoit la demande", (await sujetsRecus("mehdi.tazi@inpt.ac.ma")).includes("Complément d'information demandé : Ingénieur données – Flux logistiques"));
-  const refus2 = await appel("POST", `/api/entreprise/candidatures/${idMehdi}/decision`, { jeton: detroit, corps: { decision: "REFUSER", commentaire: "Calendrier incompatible." } });
+  verifier("R11 : l'étudiant reçoit la demande", (await sujetsRecus("mehdi.tazi@inpt.ac.ma", s => s.startsWith("Complément"))).includes("Complément d'information demandé : Ingénieur données – Flux logistiques"));
+  const refus2 = await decider(detroit, idMehdi, { decision: "REFUSER", commentaire: "Calendrier incompatible." }, "REFUSEE");
   verifier("La décision revient à l'entreprise : refus enregistré", refus2.json?.candidature?.statut === "REFUSEE");
-  verifier("L'étudiant reçoit la réponse", (await sujetsRecus("mehdi.tazi@inpt.ac.ma")).some(s => s.startsWith("Réponse à votre candidature")));
+  verifier("L'étudiant reçoit la réponse", (await sujetsRecus("mehdi.tazi@inpt.ac.ma", s => s.startsWith("Réponse"))).some(s => s.startsWith("Réponse à votre candidature")));
 
   section("6. Espace responsable");
   const tdb = await appel("GET", "/api/responsable/tableau-de-bord", { jeton: responsable });
@@ -182,16 +245,21 @@ async function panne() {
   section("7. Service indisponible : S3 (offres) est arrêté");
   const omar = await connecter("omar.bennani@inpt.ac.ma", "ETUDIANT");
   const r = await candidater(omar, 4);
-  verifier("Le dépôt répond 503 avec un message clair", r.statut === 503 && r.json?.code === "SERVICE_OFFRES_INDISPONIBLE"
-    && r.json?.message.includes("responsable"), JSON.stringify(r.json));
+  if (!ASYNCHRONE) {
+    verifier("Le dépôt répond 503 avec un message clair", r.statut === 503 && r.json?.code === "SERVICE_OFFRES_INDISPONIBLE"
+      && r.json?.message.includes("responsable"), JSON.stringify(r.json));
+  } else {
+    verifier("Le processus s'interrompt dans son sous-processus d'erreur : soumission en ERREUR", r.statut === 202 && r.json?.statut === "ERREUR",
+      JSON.stringify(r.json));
+  }
   verifier("La liste des offres répond 503 (pas d'erreur 500)", (await appel("GET", "/api/etudiant/offres", { jeton: omar })).statut === 503);
   const responsable = await connecter("responsable@inpt.ac.ma", "RESPONSABLE");
   const etat = await appel("GET", "/api/responsable/services", { jeton: responsable });
   verifier("L'état du système signale S3 indisponible", etat.json?.find(s => s.service === "S3 Offres")?.etat === "INDISPONIBLE");
-  verifier("Le responsable a reçu l'alerte du processus", (await sujetsRecus("responsable@inpt.ac.ma")).some(s => s.startsWith("Incident de traitement")));
+  verifier("Le responsable a reçu l'alerte du processus", (await sujetsRecus("responsable@inpt.ac.ma", s => s.startsWith("Incident"))).some(s => s.startsWith("Incident de traitement")));
   const sesDepots = await appel("GET", "/api/etudiant/candidatures", { jeton: omar });
-  verifier("Le dépôt interrompu reste visible par l'étudiant (statut ERREUR)", sesDepots.statut === 503
-    || sesDepots.json?.soumissionsNonEnregistrees?.some(s => s.statut === "ERREUR"));
+  verifier("Ses candidatures restent consultables malgré la panne, le dépôt interrompu en ERREUR", sesDepots.statut === 200
+    && sesDepots.json?.soumissionsNonEnregistrees?.some(s => s.statut === "ERREUR" && s.detailsIndisponibles === true), JSON.stringify(sesDepots.json));
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -203,5 +271,5 @@ try {
   echecs.push("Exécution interrompue : " + e.message);
   console.log(`  ÉCHEC  Exécution interrompue : ${e.message}`);
 }
-console.log(`\nRésultat (${mode}) : ${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
+console.log(`\nRésultat (${mode}, orchestration ${MODE}) : ${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
 process.exit(echecs.length === 0 ? 0 : 1);

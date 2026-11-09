@@ -146,3 +146,38 @@ Avec S3 arrêté, S4 répondait correctement 503 `SERVICE_OFFRES_INDISPONIBLE` (
 - **Liste des offres : un appel de compatibilité par offre** (S3, qui appelle S1). Acceptable pour une quinzaine d'offres ; au-delà, il faudrait une opération groupée.
 - **L'API du portail n'a pas de contrat OpenAPI** : c'est une passerelle propre à l'interface, pas un service exposé à d'autres clients.
 
+## Phase 5 – Processus Bonita
+
+### Réalisé
+- **Pont S4 vers Bonita** (`OrchestrateurBonita`, `ClientBonita`) : connexion `/loginservice` et jeton `X-Bonita-API-Token` (session rouverte une fois si elle expire), recherche du processus par nom et version, démarrage d'un cas avec le contrat, exécution de la tâche humaine (assignation puis exécution), suppression du cas à l'annulation.
+- **Diagramme BPMN 2.0** (`docs/bonita/processus-candidature.bpmn`, généré par `generer_bpmn.py`, copié dans `bpmn/`) : trois couloirs, étapes 1 à 9, quatre passerelles, boucle R11, minuteur de relance, sous-processus d'erreur. Les identifiants des nœuds sont les noms d'étapes du journal de S4 (vue BPMN en direct). Lu sans avertissement par `bpmn-moddle`.
+- **Classe Groovy `inpt.SoaProcessus`** : enveloppes SOAP avec WS-Security, corps REST, lecture des réponses, conditions des passerelles, journal des étapes, et une méthode « secours » par tâche (sans connecteur).
+- **Guide pas à pas** (`docs/bonita/GUIDE_BONITA.md`) et **liste de contrôle** (`CHECKLIST_BONITA.md`).
+- **Simulation du processus** (`tests/bonita/SimulationBonita.groovy`, Groovy 3.0.25 comme Bonita Studio 2025.2) : répond à l'API REST de Bonita et déroule le graphe tâche par tâche avec la classe livrée. Le test de bout en bout passe à l'identique en mode direct, en simulation avec connecteurs et en simulation en mode secours.
+- **Mode par défaut : `bonita`.** `start-all.ps1 -Orchestration direct|bonita` ; les tests Postman et le test de bout en bout en mode direct imposent eux-mêmes le mode direct.
+
+### Décisions
+- **Contrat d'instanciation : `soumissionId` en plus** de `etudiantId`, `offreId`, `lettreMotivation`. Sans lui, le processus ne saurait pas à quelle soumission rattacher son journal, son rejet ou son enregistrement.
+- **Une seule variable de processus, `dossier` (`java.util.Map`)** : chaque tâche n'a qu'une opération, ce qui rend la construction dans le Studio raisonnable.
+- **Une classe Groovy unique** plutôt que des dizaines de scripts : une ligne à saisir par expression, et un seul fichier à tester hors de Bonita.
+- **Passerelles supplémentaires « Étudiant éligible ? » et « Offre existante et active ? »** : sans elles, un étudiant ou une offre inconnus feraient échouer un connecteur suivant et passer le cas en erreur technique au lieu d'un rejet R1 ou R2. La passerelle de décision de l'étape 5 reste unique.
+- **`verifierEtudiant` renvoie aussi `filiere` et `niveau`** (éléments facultatifs ajoutés au WSDL, rétrocompatibles) : l'étape 6 en a besoin pour informer l'entreprise, et `consulterEtudiant` ferait une faute pour un étudiant inconnu.
+- **Gestion des erreurs** : chaque connecteur lève l'erreur `SERVICE_INDISPONIBLE` ; un seul sous-processus événementiel la traite (soumission en `ERREUR`, responsable alerté), plutôt qu'un événement de bordure sur chaque tâche. La variable `dossier` retient la dernière étape réussie, pour un message utile.
+- **Minuteur de 7 jours** sur la tâche de décision : relance de l'entreprise, puis la tâche est recréée.
+- **R10 en mode bonita** : S4 vérifie qu'une place reste avant d'exécuter la tâche (409 sinon), comme en mode direct, plutôt que de laisser le cas finir en erreur technique.
+- **Candidatures de démonstration sans cas Bonita** : leurs décisions passent par le mode direct (message dans le journal de S4).
+- **`X-HTTP-Method-Override`** accepté par tous les services REST : `HttpURLConnection` (mode secours) et certains connecteurs ne savent pas envoyer PATCH.
+
+### Incidents et corrections
+- **Le portail répondait 503 sur « mes candidatures » quand S3 était arrêté** (titres des offres introuvables). Trouvé par le test en mode simulation. La liste reste maintenant affichée avec « détails momentanément indisponibles » ; idem pour le profil de l'étudiant si S1 est arrêté.
+- **`build.ps1` arrête les services démarrés** avant de construire : un service en marche verrouille ses jars.
+
+### Ce qui reste à vérifier par vous (non vérifiable ici)
+- Les clics dans Bonita Studio 2025.2 : libellés exacts des menus et des champs, import du `.bpmn`, disponibilité des connecteurs sur la Marketplace.
+- Le test final face au vrai Bonita : `.\scripts\test-bout-en-bout.ps1 -Orchestration bonita` et `CHECKLIST_BONITA.md`.
+
+### Limites connues
+- En mode secours (sans connecteur), une panne ne déclenche pas l'événement d'erreur BPMN : la classe signale l'incident elle-même et la tâche passe à l'état « Échec » dans Bonita.
+- Le compte technique `walter.bates` démarre les cas et exécute les décisions : dans Bonita, l'auteur réel de la décision n'apparaît pas ; il est connu de S4 (`X-Acteur`).
+- Supprimer un cas Bonita à l'annulation efface son historique dans Bonita ; l'historique reste dans S4.
+

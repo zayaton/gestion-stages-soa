@@ -10,7 +10,8 @@ import ma.inpt.stages.common.Validateur;
 public final class ServiceEtudiants {
 
     /** Résultat de la vérification utilisée à l'étape 2 du processus (règle R1). */
-    public record Verification(boolean existe, String statut, boolean eligible, String regle, String motif, String nomComplet, String email) {
+    public record Verification(boolean existe, String statut, boolean eligible, String regle, String motif, String nomComplet, String email,
+                               String filiere, String niveau) {
     }
 
     private static final Map<String, Set<String>> TRANSITIONS = Map.of(
@@ -60,7 +61,7 @@ public final class ServiceEtudiants {
     public Verification verifier(long id) {
         Validateur.verifierIdentifiant(id);
         return dao.trouver(id).map(ServiceEtudiants::evaluer).orElseGet(() ->
-                new Verification(false, null, false, "R1", "Aucun étudiant ne correspond à l'identifiant " + id + ".", null, null));
+                new Verification(false, null, false, "R1", "Aucun étudiant ne correspond à l'identifiant " + id + ".", null, null, null, null));
     }
 
     private static Verification evaluer(Etudiant e) {
@@ -70,7 +71,8 @@ public final class ServiceEtudiants {
             case "EN_STAGE" -> "L'étudiant est déjà en stage : il ne peut pas candidater.";
             default -> "L'étudiant est diplômé : il ne peut pas candidater.";
         };
-        return new Verification(true, e.statut(), motif == null, motif == null ? null : "R1", motif, e.prenom() + " " + e.nom(), e.email());
+        return new Verification(true, e.statut(), motif == null, motif == null ? null : "R1", motif, e.prenom() + " " + e.nom(), e.email(),
+                e.filiere(), e.niveau());
     }
 
     public Etudiant changerStatut(long id, String statut) {

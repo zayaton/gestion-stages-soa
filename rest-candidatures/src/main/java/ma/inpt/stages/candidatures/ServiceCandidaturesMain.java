@@ -39,11 +39,18 @@ public final class ServiceCandidaturesMain {
     /** ORCHESTRATION_MODE (orchestration.mode) : « direct » ou « bonita ». */
     private static Orchestrateur orchestrateur(Configuration config, ServiceCandidatures service, CandidatureDaoJdbc dao) {
         String mode = config.valeur("orchestration.mode").trim().toLowerCase(Locale.ROOT);
+        Partenaires partenaires = new PartenairesDistants(config);
+        OrchestrateurDirect direct = new OrchestrateurDirect(service, dao, partenaires, config.valeur("candidatures.responsable.email"),
+                config.entier("candidatures.stage.debut.jours"), Clock.system(ZoneId.of(config.valeur("soa.fuseau"))));
         if ("direct".equals(mode)) {
             LoggerFactory.getLogger(ServiceCandidaturesMain.class).info("Orchestration en mode direct (secours de développement et de test)");
-            return new OrchestrateurDirect(service, dao, new PartenairesDistants(config), config.valeur("candidatures.responsable.email"),
-                    config.entier("candidatures.stage.debut.jours"), Clock.system(ZoneId.of(config.valeur("soa.fuseau"))));
+            return direct;
         }
-        throw new IllegalStateException("Mode d'orchestration non pris en charge : « " + mode + " ». Valeur possible : direct.");
+        if ("bonita".equals(mode)) {
+            LoggerFactory.getLogger(ServiceCandidaturesMain.class).info("Orchestration en mode bonita : {} (processus {} {})",
+                    config.valeur("bonita.url"), config.valeur("bonita.processus.nom"), config.valeur("bonita.processus.version"));
+            return new OrchestrateurBonita(service, dao, partenaires, direct, new ClientBonita(config));
+        }
+        throw new IllegalStateException("Mode d'orchestration non pris en charge : « " + mode + " ». Valeurs possibles : bonita, direct.");
     }
 }

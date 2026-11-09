@@ -138,6 +138,8 @@ class EtudiantsSoapTest {
         assertTrue(v.isExiste());
         assertFalse(v.isEligible());
         assertTrue(v.getMotif().contains("suspendu"));
+        assertEquals("AMOA", v.getFiliere(), "filière transmise pour l'étape 6 du processus");
+        assertEquals("2A", v.getNiveau());
     }
 
     // Fautes typées

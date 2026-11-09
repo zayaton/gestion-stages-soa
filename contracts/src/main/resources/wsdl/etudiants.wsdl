@@ -138,6 +138,12 @@
           </xs:element>
           <xs:element name="nomComplet" type="xs:string" minOccurs="0"/>
           <xs:element name="email" type="xs:string" minOccurs="0"/>
+          <xs:element name="filiere" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>Filière de l'étudiant, si celui-ci existe.</xs:documentation></xs:annotation>
+          </xs:element>
+          <xs:element name="niveau" type="xs:string" minOccurs="0">
+            <xs:annotation><xs:documentation>Niveau de l'étudiant, si celui-ci existe.</xs:documentation></xs:annotation>
+          </xs:element>
         </xs:sequence>
       </xs:complexType>
 

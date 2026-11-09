@@ -22,6 +22,9 @@ try {
         & "$PSScriptRoot\reset-db.ps1" | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'La réinitialisation des bases a échoué.' }
     }
+    # La collection vérifie les résultats immédiats du mode direct.
+    & "$PSScriptRoot\start-all.ps1" -Orchestration direct *> $null
+    if ($LASTEXITCODE -ne 0) { throw 'Démarrage de la pile en mode direct impossible.' }
     # Après une réinitialisation, les services retrouvent leur base en quelques secondes.
     $limite = (Get-Date).AddSeconds(90)
     do {

@@ -15,6 +15,7 @@ import ma.inpt.stages.portail.Vues.EtudiantVue;
  * Composition de données venant de plusieurs services : une candidature (S4) complétée du titre de l'offre (S3),
  * du nom de l'entreprise (S2) et de l'étudiant (S1). Chaque service reste seul maître de ses données.
  * Un cache par requête évite d'interroger deux fois le même service pour la même donnée.
+ * Si un service de détail est en panne, la liste reste affichée avec la mention « détails momentanément indisponibles ».
  */
 final class Composition {
 
@@ -54,18 +55,32 @@ final class Composition {
             copie.put("entreprise", entreprise(o.getEntrepriseId()));
             copie.put("villeOffre", o.getVille());
         } catch (ErreurMetier e) {
-            if (e.type() != ErreurMetier.Type.INTROUVABLE) {
+            if (e.type() == ErreurMetier.Type.INTROUVABLE) {
+                copie.put("titreOffre", "Offre n° " + offreId);
+            } else if (e.type() == ErreurMetier.Type.INDISPONIBLE) {
+                // S3 ou S2 en panne : la liste reste affichée, seuls les détails manquent.
+                copie.put("titreOffre", "Offre n° " + offreId + " (détails momentanément indisponibles)");
+                copie.put("detailsIndisponibles", true);
+            } else {
                 throw e;
             }
-            copie.put("titreOffre", "Offre n° " + offreId);
         }
         return copie;
     }
 
     /** Ajoute l'étudiant, complet ou masqué selon qui consulte. */
     ObjectNode avecEtudiant(ObjectNode element, boolean masquer) {
-        EtudiantVue e = etudiant(element.path("etudiantId").asLong());
-        element.set("etudiant", Json.MAPPEUR.valueToTree(masquer ? e.masquee() : e));
+        try {
+            EtudiantVue e = etudiant(element.path("etudiantId").asLong());
+            element.set("etudiant", Json.MAPPEUR.valueToTree(masquer ? e.masquee() : e));
+        } catch (ErreurMetier ex) {
+            if (ex.type() != ErreurMetier.Type.INDISPONIBLE) {
+                throw ex;
+            }
+            // S1 en panne : la candidature reste visible, sans le profil de l'étudiant.
+            element.putNull("etudiant");
+            element.put("detailsIndisponibles", true);
+        }
         return element;
     }
 

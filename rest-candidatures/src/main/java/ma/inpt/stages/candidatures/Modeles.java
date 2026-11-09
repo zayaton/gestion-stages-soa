@@ -69,6 +69,12 @@ public final class Modeles {
             @NotBlank(message = "Le motif est obligatoire.") @Size(max = 500, message = "Le motif ne doit pas dépasser 500 caractères.") String motif) {
     }
 
+    /** Interruption signalée par le processus Bonita (sous-processus d'erreur). */
+    public record ErreurProcessus(
+            @NotBlank(message = "L'étape est obligatoire.") @Size(max = 100, message = "Le nom d'étape ne doit pas dépasser 100 caractères.") String etape,
+            @NotBlank(message = "Le motif est obligatoire.") @Size(max = 500, message = "Le motif ne doit pas dépasser 500 caractères.") String motif) {
+    }
+
     /** Étape signalée par le processus Bonita, pour la vue BPMN en direct. */
     public record NouvelleEtape(
             @NotBlank(message = "L'étape est obligatoire.") @Size(max = 40, message = "Le nom d'étape ne doit pas dépasser 40 caractères.") String etape,

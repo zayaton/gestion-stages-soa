@@ -97,6 +97,20 @@ public final class RessourceCandidatures {
         return service.rejeter(id, rejet, acteur());
     }
 
+    @POST
+    @Path("soumissions/{id}/erreur")
+    @ClientsAutorises({"bonita", "services", "postman"})
+    public Soumission signalerErreur(@PathParam("id") long id, Modeles.ErreurProcessus erreur) {
+        return service.signalerErreur(id, erreur, acteur());
+    }
+
+    /** Mode d'orchestration en service : « bonita » ou « direct ». Les scripts de test vérifient qu'il convient. */
+    @GET
+    @Path("processus/mode")
+    public java.util.Map<String, String> mode() {
+        return java.util.Map.of("mode", orchestrateur.mode());
+    }
+
     @GET
     @Path("etudiants/{id}/soumissions")
     public List<Soumission> soumissionsEtudiant(@PathParam("id") long id) {

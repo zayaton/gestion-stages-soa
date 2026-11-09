@@ -62,7 +62,14 @@ final class Doublures {
         @Override
         public void terminerSoumission(long id, String statut, String regle, String motif) {
             Soumission s = soumissions.get(id);
-            soumissions.put(id, new Soumission(s.id(), s.etudiantId(), s.offreId(), s.lettreMotivation(), statut, regle, motif, null, null, s.creeLe(), List.of()));
+            soumissions.put(id, new Soumission(s.id(), s.etudiantId(), s.offreId(), s.lettreMotivation(), statut, regle, motif, s.bonitaCaseId(), null, s.creeLe(), List.of()));
+        }
+
+        @Override
+        public void definirCasBonita(long soumissionId, long casId) {
+            Soumission s = soumissions.get(soumissionId);
+            soumissions.put(soumissionId, new Soumission(s.id(), s.etudiantId(), s.offreId(), s.lettreMotivation(), s.statut(), s.regleRejetee(),
+                    s.motifRejet(), casId, null, s.creeLe(), List.of()));
         }
 
         @Override
