@@ -42,3 +42,7 @@ rapport/*.out
 rapport/*.synctex.gz
 rapport/outils/__pycache__/
 docs/bonita/deploiement/target/
+
+# Espace de travail local créé par Postman (import des fichiers de tests/postman)
+.postman/
+/postman/

@@ -9,9 +9,10 @@
 | `rapport/figures/swagger-s4.png`, `newman-rapport.png` | `node tests\ui\captures-outils.mjs` (S4 démarré, après `tests-postman.ps1`) |
 | `rapport/figures/bpmn-processus.png` | `node rapport\outils\exporter_bpmn.mjs` |
 
-## Captures à faire soi-même (3)
+## Captures faites à la main (3, faites le 10/11)
 
-SoapUI et Postman sont des logiciels de bureau : ces trois captures ne sont pas automatisées. Chacune a un emplacement
+SoapUI et Postman sont des logiciels de bureau : ces trois captures ne sont pas automatisées. Elles sont faites et
+intégrées au rapport ; pour les refaire, suivre le tableau ci-dessous. Chacune a un emplacement
 dans le rapport (chapitre 9), marqué `% TODO capture :` dans les sources LaTeX et affiché dans le PDF par un cadre
 « CAPTURE À FAIRE ».
 
