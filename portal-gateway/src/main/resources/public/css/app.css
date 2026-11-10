@@ -290,7 +290,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width
 
 /* Vide et chargement */
 .vide { text-align: center; padding: 46px 20px 40px; color: var(--encre-2); border: 1px solid var(--filet); border-radius: var(--rayon); background: var(--surface); box-shadow: var(--ombre); }
-.vide::before { content: ""; display: block; width: 150px; height: 56px; margin: 0 auto 14px; background: url(/img/zlafa.png) center / contain no-repeat; opacity: .55; }
 .vide .titre { font-family: var(--titre); font-weight: 700; font-size: 1.15rem; color: var(--nuit); display: block; margin-bottom: 4px; }
 .chargement { padding: 24px 0; color: var(--encre-3); display: flex; align-items: center; gap: 12px; }
 .chargement::before { content: ""; width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2.5px solid var(--filet); border-top-color: var(--accent); animation: tourne .9s linear infinite; }
@@ -377,13 +376,6 @@ dialog.modale::backdrop { background: rgba(11, 42, 74, .45); backdrop-filter: bl
 .connexion-carte h1 { color: #fff; font-size: 2.8rem; margin: 0 0 16px; line-height: 1.04; }
 .connexion-carte h1 span { color: var(--ciel); font-weight: 700; font-size: .72em; }
 .connexion-carte p { color: #B9CDE2; }
-.circuit { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 10px; }
-.circuit li { display: grid; grid-template-columns: 22px 1fr; column-gap: 12px; align-items: start; }
-.circuit li::before { content: ""; width: 16px; height: 20px; margin-top: 1px; grid-row: span 2; background: var(--ciel); clip-path: var(--arche); }
-.circuit li.entreprise::before { background: #8CBDB7; }
-.circuit li.responsable::before { background: #D3A58C; }
-.circuit strong { color: #fff; font-family: var(--titre); font-weight: 700; }
-.circuit span { color: #B9CDE2; font-size: .92rem; }
 .connexion-formulaire { display: flex; align-items: center; justify-content: center; padding: 48px 36px; position: relative; }
 .connexion-formulaire::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px;
   background: var(--nuit); }
