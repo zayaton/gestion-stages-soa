@@ -256,6 +256,10 @@ async function panne() {
   const responsable = await connecter("responsable@inpt.ac.ma", "RESPONSABLE");
   const etat = await appel("GET", "/api/responsable/services", { jeton: responsable });
   verifier("L'état du système signale S3 indisponible", etat.json?.find(s => s.service === "S3 Offres")?.etat === "INDISPONIBLE");
+  const tableau = await appel("GET", "/api/responsable/tableau-de-bord", { jeton: responsable });
+  verifier("Le tableau de bord reste affiché : indicateurs d'offres absents, S3 signalé, candidatures comptées", tableau.statut === 200
+    && tableau.json?.offresTotal === null && tableau.json?.sourcesIndisponibles?.includes("S3 Offres") && tableau.json?.candidaturesTotal > 0,
+    JSON.stringify(tableau.json));
   verifier("Le responsable a reçu l'alerte du processus", (await sujetsRecus("responsable@inpt.ac.ma", s => s.startsWith("Incident"))).some(s => s.startsWith("Incident de traitement")));
   const sesDepots = await appel("GET", "/api/etudiant/candidatures", { jeton: omar });
   verifier("Ses candidatures restent consultables malgré la panne, le dépôt interrompu en ERREUR", sesDepots.statut === 200

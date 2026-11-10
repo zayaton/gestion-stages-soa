@@ -32,6 +32,7 @@ export async function afficher(route, contenu) {
 
 /** Répartition par statut : tableau, avec un filet de longueur proportionnelle (une seule teinte ; la valeur est écrite). */
 function repartition(titre, valeurs, total) {
+  if (!valeurs) return h("section", { class: "panneau" }, h("h2", {}, titre), h("p", { class: "discret" }, "Momentanément indisponible."));
   const max = Math.max(1, ...Object.values(valeurs));
   return h("section", { class: "panneau" }, h("h2", {}, titre),
     h("table", { class: "tableau repartition" },
@@ -56,18 +57,23 @@ async function tableauDeBord(contenu) {
     ], bilan.details, "Rappels envoyés") : null);
   } }, "Envoyer les rappels maintenant");
 
+  // Un service arrêté laisse ses indicateurs à null : on affiche « – » et on le signale, sans masquer le reste.
+  const ou = (valeur, texte) => (valeur === null || valeur === undefined ? "–" : texte(valeur));
+  const indisponibles = k.sourcesIndisponibles ?? [];
   vider(contenu,
     entetePage("Tableau de bord", `Situation au ${dateFr(new Date())}.`),
+    indisponibles.length ? message("ko", "Indicateurs incomplets", `Service indisponible : ${indisponibles.join(", ")}. Les autres indicateurs restent à jour.`) : null,
     h("div", { class: "indicateurs", role: "list" },
-      h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Offres actives"), h("div", { class: "valeur" }, nombre(k.offresParStatut.ACTIVE ?? 0)),
-        h("div", { class: "precision" }, `sur ${nombre(k.offresTotal)} offres`)),
-      h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Candidatures"), h("div", { class: "valeur" }, nombre(k.candidaturesTotal)),
-        h("div", { class: "precision" }, `${nombre(k.candidaturesParStatut.DEPOSEE + k.candidaturesParStatut.EN_COURS_EVALUATION)} en attente de décision`)),
+      h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Offres actives"),
+        h("div", { class: "valeur" }, ou(k.offresParStatut, o => nombre(o.ACTIVE ?? 0))),
+        h("div", { class: "precision" }, ou(k.offresTotal, t => `sur ${nombre(t)} offres`))),
+      h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Candidatures"), h("div", { class: "valeur" }, ou(k.candidaturesTotal, nombre)),
+        h("div", { class: "precision" }, ou(k.candidaturesParStatut, c => `${nombre(c.DEPOSEE + c.EN_COURS_EVALUATION)} en attente de décision`))),
       h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Taux d'acceptation"),
         h("div", { class: "valeur" }, k.tauxAcceptation === null || k.tauxAcceptation === undefined ? "–" : `${String(k.tauxAcceptation).replace(".", ",")} %`),
         h("div", { class: "precision" }, "des candidatures ayant reçu une décision")),
-      h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Stages en cours"), h("div", { class: "valeur" }, nombre(k.stagesEnCours)),
-        h("div", { class: "precision" }, `${nombre(k.stagesParStatut.PLANIFIE)} planifié(s)`))),
+      h("div", { class: "indicateur", role: "listitem" }, h("div", { class: "libelle" }, "Stages en cours"), h("div", { class: "valeur" }, ou(k.stagesEnCours, nombre)),
+        h("div", { class: "precision" }, ou(k.stagesParStatut, s => `${nombre(s.PLANIFIE)} planifié(s)`)))),
     h("div", { class: "grille-egale" },
       repartition("Candidatures par statut", k.candidaturesParStatut, k.candidaturesTotal),
       repartition("Stages par statut", k.stagesParStatut),

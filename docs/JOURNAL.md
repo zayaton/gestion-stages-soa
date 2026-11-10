@@ -239,3 +239,17 @@ Avec S3 arrêté, S4 répondait correctement 503 `SERVICE_OFFRES_INDISPONIBLE` (
 ### Reste à faire par vous
 - Remplacer « Pr. [NOM À COMPLÉTER] » (couverture, remerciements) : `rapport/chapitres/00-couverture.tex` et `01-preliminaires.tex`.
 - Les 12 captures de `docs/CAPTURES_A_FAIRE.md`, puis `.\rapport\compiler.ps1`.
+
+## Phase 8 – Kit vidéo
+
+### Réalisé
+- `docs/SCENARIO_VIDEO.md` : script de 9 min 30 en trois parties (Hiba : architecture, SoapUI, Postman ; Hibatollah : processus Bonita de bout en bout, courriels, vue BPMN ; Aya : règles de rejet, complément, responsable, panne, conclusion), avec les clics, les comptes, les phrases à dire, la liste de contrôle avant l'enregistrement et les solutions aux incidents de prise.
+- `scripts/arreter-service.ps1 S1…S6|Portail` : arrête un seul service pour montrer une panne ; `start-all.ps1` le relance dans le même mode.
+- README : section « Documentation ».
+
+### Corrigé en préparant le script
+- **Le tableau de bord du responsable échouait entièrement quand S3 était arrêté** (il compte les offres via S3), alors que c'est l'écran qui doit montrer la panne. Chaque source (S3, S4, S6) est maintenant facultative : ses indicateurs valent null, le service est nommé dans `sourcesIndisponibles`, l'interface affiche « – » et un bandeau « Indicateurs incomplets ». Vérification ajoutée au test de bout en bout (6 vérifications pendant la panne au lieu de 5) ; réussi en mode direct et en simulation Bonita.
+- Le script vidéo ouvre la page de l'offre avant d'arrêter S3 : la page d'une offre vient de S3.
+
+### Reste à faire par vous
+- Enregistrer la vidéo (processus déployé dans Bonita Studio).

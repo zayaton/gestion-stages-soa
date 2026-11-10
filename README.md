@@ -21,6 +21,7 @@ Depuis PowerShell, à la racine du projet :
 .\scripts\reset-db.ps1           # remet les bases et Mailpit à l'état initial
 .\scripts\verifier-socle.ps1     # vérifie le socle et les données de démonstration
 .\scripts\build.ps1              # compile et lance les tests unitaires
+.\scripts\arreter-service.ps1 S3 # arrête un seul service (démonstration d'une panne) ; start-all le relance
 ```
 
 Si PowerShell refuse d'exécuter les scripts :
@@ -136,3 +137,15 @@ Il utilise Edge, déjà installé sous Windows ; `-Chromium` télécharge et uti
 
 Tous les étudiants et toutes les entreprises ont un compte : voir [docs/SCENARIOS_DEMO.md](docs/SCENARIOS_DEMO.md).
 Toutes les données sont fictives.
+
+## Documentation
+
+| Document | Contenu |
+|---|---|
+| [rapport/rapport.pdf](rapport/rapport.pdf) | Rapport technique (compilation : `.\rapport\compiler.ps1`, XeLaTeX) |
+| [docs/CAPTURES_A_FAIRE.md](docs/CAPTURES_A_FAIRE.md) | Captures d'écran à faire à la main pour le rapport (Bonita, SoapUI, Postman) |
+| [docs/SCENARIO_VIDEO.md](docs/SCENARIO_VIDEO.md) | Script minute par minute de la vidéo de démonstration et liste de contrôle |
+| [docs/SCENARIOS_DEMO.md](docs/SCENARIOS_DEMO.md) | Un compte et une offre par scénario de démonstration |
+| [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md) | Construction du processus dans Bonita Studio, pas à pas |
+| [docs/SECURITE_SOAP.md](docs/SECURITE_SOAP.md) | En-tête WS-Security à envoyer aux services SOAP |
+| [docs/JOURNAL.md](docs/JOURNAL.md) | Journal du projet : décisions, incidents, limites |

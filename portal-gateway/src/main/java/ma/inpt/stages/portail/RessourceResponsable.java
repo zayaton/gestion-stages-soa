@@ -87,30 +87,65 @@ public final class RessourceResponsable {
     @GET
     @Path("tableau-de-bord")
     public ObjectNode tableauDeBord() {
+        // Chaque source est facultative : si un service est indisponible, ses indicateurs valent null et il est
+        // nommé dans « sourcesIndisponibles », mais le reste du tableau de bord s'affiche (le responsable doit voir la panne).
+        ObjectNode n = Json.MAPPEUR.createObjectNode();
+        ArrayNode indisponibles = n.putArray("sourcesIndisponibles");
+
         Map<String, Integer> offres = new TreeMap<>();
-        Services.soap("offres", () -> services.offres.listerOffres(new FiltreOffres())).forEach(o -> offres.merge(o.getStatut(), 1, Integer::sum));
+        if (lire(indisponibles, "S3 Offres", () -> Services.soap("offres", () -> services.offres.listerOffres(new FiltreOffres()))
+                .forEach(o -> offres.merge(o.getStatut(), 1, Integer::sum)))) {
+            n.set("offresParStatut", Json.MAPPEUR.valueToTree(offres));
+            n.put("offresTotal", offres.values().stream().mapToInt(Integer::intValue).sum());
+        } else {
+            n.putNull("offresParStatut");
+            n.putNull("offresTotal");
+        }
+
         Map<String, Integer> candidatures = new LinkedHashMap<>();
         List.of("DEPOSEE", "EN_COURS_EVALUATION", "ACCEPTEE", "REFUSEE", "ANNULEE").forEach(s -> candidatures.put(s, 0));
-        Services.rest(services.candidatures.get("/candidatures")).forEach(c -> candidatures.merge(c.path("statut").asText(), 1, Integer::sum));
-        Map<String, Integer> stages = new LinkedHashMap<>();
-        List.of("PLANIFIE", "EN_COURS", "TERMINE", "INTERROMPU").forEach(s -> stages.put(s, 0));
-        Services.rest(services.suivi.get("/stages")).forEach(s -> stages.merge(s.path("statut").asText(), 1, Integer::sum));
-
-        int decidees = candidatures.get("ACCEPTEE") + candidatures.get("REFUSEE");
-        ObjectNode n = Json.MAPPEUR.createObjectNode();
-        n.set("offresParStatut", Json.MAPPEUR.valueToTree(offres));
-        n.put("offresTotal", offres.values().stream().mapToInt(Integer::intValue).sum());
-        n.set("candidaturesParStatut", Json.MAPPEUR.valueToTree(candidatures));
-        n.put("candidaturesTotal", candidatures.values().stream().mapToInt(Integer::intValue).sum());
-        // Taux d'acceptation : part des candidatures acceptées parmi celles qui ont reçu une décision.
-        if (decidees > 0) {
-            n.put("tauxAcceptation", Math.round(1000.0 * candidatures.get("ACCEPTEE") / decidees) / 10.0);
+        if (lire(indisponibles, "S4 Candidatures", () -> Services.rest(services.candidatures.get("/candidatures"))
+                .forEach(c -> candidatures.merge(c.path("statut").asText(), 1, Integer::sum)))) {
+            int decidees = candidatures.get("ACCEPTEE") + candidatures.get("REFUSEE");
+            n.set("candidaturesParStatut", Json.MAPPEUR.valueToTree(candidatures));
+            n.put("candidaturesTotal", candidatures.values().stream().mapToInt(Integer::intValue).sum());
+            // Taux d'acceptation : part des candidatures acceptées parmi celles qui ont reçu une décision.
+            if (decidees > 0) {
+                n.put("tauxAcceptation", Math.round(1000.0 * candidatures.get("ACCEPTEE") / decidees) / 10.0);
+            } else {
+                n.putNull("tauxAcceptation");
+            }
         } else {
+            n.putNull("candidaturesParStatut");
+            n.putNull("candidaturesTotal");
             n.putNull("tauxAcceptation");
         }
-        n.set("stagesParStatut", Json.MAPPEUR.valueToTree(stages));
-        n.put("stagesEnCours", stages.get("EN_COURS"));
+
+        Map<String, Integer> stages = new LinkedHashMap<>();
+        List.of("PLANIFIE", "EN_COURS", "TERMINE", "INTERROMPU").forEach(s -> stages.put(s, 0));
+        if (lire(indisponibles, "S6 Suivi des stages", () -> Services.rest(services.suivi.get("/stages"))
+                .forEach(s -> stages.merge(s.path("statut").asText(), 1, Integer::sum)))) {
+            n.set("stagesParStatut", Json.MAPPEUR.valueToTree(stages));
+            n.put("stagesEnCours", stages.get("EN_COURS"));
+        } else {
+            n.putNull("stagesParStatut");
+            n.putNull("stagesEnCours");
+        }
         return n;
+    }
+
+    /** Exécute une lecture ; renvoie false (et note le service) si celui-ci est indisponible. Les autres erreurs remontent. */
+    private static boolean lire(ArrayNode indisponibles, String service, Runnable lecture) {
+        try {
+            lecture.run();
+            return true;
+        } catch (ErreurMetier e) {
+            if (e.type() != ErreurMetier.Type.INDISPONIBLE) {
+                throw e;
+            }
+            indisponibles.add(service);
+            return false;
+        }
     }
 
     /** État de chaque service (GET /health), pour repérer une panne depuis l'interface. */
