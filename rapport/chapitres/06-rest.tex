@@ -1,0 +1,82 @@
+\chapter{Documentation des API REST}\label{chap:rest}
+
+\section{Conventions}
+
+Les trois services REST partagent les conventions suivantes.
+
+\begin{itemize}
+  \item \textbf{Ressources et verbes.} Les URI désignent des ressources au pluriel (\code{/candidatures}, \code{/stages/\{id\}/evaluations}), versionnées sous \code{/api/v1}. \code{GET} consulte, \code{POST} crée ou déclenche une action métier, \code{PUT} remplace, \code{PATCH} modifie partiellement (le statut), \code{DELETE} supprime ou annule.
+  \item \textbf{Format.} JSON en UTF-8 dans les deux sens ; dates au format ISO~8601.
+  \item \textbf{En-têtes.} \code{X-API-Key} (obligatoire, une clé par client), \code{X-Correlation-Id} (facultatif, renvoyé dans la réponse), \code{X-Acteur} (auteur métier d'une action, par exemple \code{entreprise:1}, inscrit dans les historiques).
+  \item \textbf{Contrats.} Chaque service sert son contrat OpenAPI~3 (\code{/openapi.yaml}) et une interface Swagger UI (\code{/docs/}) fonctionnant sans Internet. Un test vérifie que chaque route du code figure dans le contrat et réciproquement.
+\end{itemize}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Code} & \textbf{Code d'erreur} & \textbf{Usage} \\ \midrule
+200 & – & Consultation, modification, décision réussies. \\
+201 & – & Ressource créée (candidature, notification, stage, compte rendu, évaluation). \\
+202 & – & Soumission traitée par le processus : enregistrée ou rejetée (le résultat est dans le corps). \\
+204 & – & Annulation ou suppression réussie, sans corps. \\
+400 & \code{REQUETE\_INVALIDE} & Requête mal formée : JSON illisible, paramètre de type incorrect. \\
+401 & \code{NON\_AUTHENTIFIE} & Clé d'API absente ou invalide. \\
+403 & \code{ACCES\_INTERDIT} & Clé valide, mais client non autorisé pour cette opération. \\
+404 & \code{*\_INTROUVABLE} & Ressource inexistante (\code{CANDIDATURE\_INTROUVABLE}, \code{STAGE\_INTROUVABLE}…). \\
+409 & selon la règle & Conflit avec une règle de gestion (R5, R6, R8, R9, R10). \\
+422 & \code{DONNEES\_INVALIDES} & Données bien formées mais invalides (champ manquant, note hors de 0 à 20…). \\
+503 & \code{SERVICE\_*\_INDISPONIBLE} & Un service dépendant (\code{SERVICE\_OFFRES\_INDISPONIBLE}…) ou la base (\code{BASE\_INDISPONIBLE}) ne répond pas. \\
+\bottomrule
+\end{tabularx}
+\caption{Codes HTTP utilisés}\label{tab:codes-http}
+\end{table}
+
+Toute erreur a le même corps JSON : \code{code} (stable), \code{message} (en français), \code{details} (liste, par exemple un message par champ invalide), \code{timestamp} et \code{path}. Le listing~\ref{lst:erreur-409} en donne un exemple réel.
+
+\section{Points d'accès}
+
+Comme pour SOAP, les tableaux sont produits à partir des contrats OpenAPI (script \code{generer\_tables.py}). Un point d'interrogation marque un paramètre facultatif ; la colonne « Corps » nomme le schéma OpenAPI attendu.
+
+\subsection{S4 Gestion des candidatures}
+S4 distingue la \emph{soumission} (la demande qui entre dans le processus) de la \emph{candidature} (créée seulement si la passerelle de décision l'accepte). Les points d'accès marqués « processus » sont appelés par Bonita : contrôles R5 et R6, enregistrement, rejet, journal des étapes.
+{\small\input{generes/rest-candidatures}}
+
+\subsection{S5 Notifications}
+Chaque notification est enregistrée puis réellement envoyée par SMTP (Mailpit). Le statut \statut{ENVOYEE} ou \statut{ECHEC} est conservé avec l'erreur éventuelle ; la réponse est 201 dans les deux cas, car la notification a bien été enregistrée. Huit types sont gérés : confirmation de dépôt, candidature rejetée, nouvelle candidature (pour l'entreprise), acceptation, refus, demande de complément, rappel de date limite, alerte au responsable.
+{\small\input{generes/rest-notifications}}
+
+\subsection{S6 Suivi des stages}
+La création d'un stage est idempotente : un second appel pour la même candidature renvoie le stage existant au lieu d'en créer un doublon, ce qui permet de rejouer sans risque une étape de suivi interrompue.
+{\small\input{generes/rest-suivi}}
+
+\section{Exemples d'échanges}
+
+Les échanges suivants ont été enregistrés sur la pile en fonctionnement (mode direct) ; seule l'indentation du JSON a été ajoutée.
+
+\lstinputlisting[language=HTTPfr, caption={Dépôt d'une candidature : soumission enregistrée, avec les étapes du processus}, label={lst:depot}]{generes/exemples/rest-soumission-enregistree.txt}
+
+\lstinputlisting[language=HTTPfr, caption={Dépôt refusé par la règle R3 (date limite dépassée)}, label={lst:rejet}]{generes/exemples/rest-soumission-rejetee.txt}
+
+\lstinputlisting[language=HTTPfr, caption={Annulation refusée pendant l'évaluation (règle R8)}, label={lst:erreur-409}]{generes/exemples/rest-erreur-409-r8.txt}
+
+\lstinputlisting[language=HTTPfr, caption={Décision de l'entreprise : acceptation}]{generes/exemples/rest-decision.txt}
+
+Les autres échanges enregistrés (consultation de la candidature, stage créé dans S6, notification enregistrée dans S5, erreurs 404 et 401) sont dans \code{rapport/generes/exemples/}.
+
+\section{Référence OpenAPI et Swagger UI}
+
+Les contrats complets, avec les schémas de chaque corps et des exemples pour chaque opération, sont dans le dépôt :
+\begin{itemize}
+  \item \code{rest-candidatures/src/main/resources/openapi.yaml} ;
+  \item \code{rest-notifications/src/main/resources/openapi.yaml} ;
+  \item \code{rest-suivi/src/main/resources/openapi.yaml}.
+\end{itemize}
+Une fois les services démarrés, chacun est consultable et testable dans Swagger UI (figure~\ref{fig:swagger}) : \url{http://localhost:8084/docs/}, \url{http://localhost:8085/docs/}, \url{http://localhost:8086/docs/}. Le bouton « Authorize » permet de saisir la clé d'API.
+
+% TODO capture : Swagger UI de S4 (http://localhost:8084/docs/), liste des opérations dépliée sur « Processus ».
+\capture{swagger-s4.png}{70mm}{Swagger UI de S4, servi par le service lui-même}{fig:swagger}
+
+\section{Implémentation}
+
+Chaque service REST est une application Jersey sur un serveur Grizzly. Les ressources JAX-RS ne contiennent que la traduction HTTP ; les règles sont dans une classe de service, testée sans serveur. Des filtres communs (module \code{common}) contrôlent la clé d'API et les clients autorisés, propagent l'identifiant de corrélation et journalisent chaque accès avec sa durée ; un unique \emph{ExceptionMapper} produit le corps d'erreur uniforme. Les appels sortants passent par un client HTTP commun, avec délais d'attente et traduction des erreurs du service appelé : un 404 de S3 devient une erreur métier claire dans S4, et une panne devient un 503.

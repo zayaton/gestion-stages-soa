@@ -1,0 +1,26 @@
+00:59:52.276 soap-etudiants     m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierEtudiant par le compte services
+00:59:52.381 soap-etudiants     m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterEtudiant par le compte services
+00:59:52.505 soap-offres        m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierDisponibilite par le compte services
+00:59:52.615 soap-offres        m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterOffre par le compte services
+00:59:52.728 soap-entreprises   m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierEntreprise par le compte services
+00:59:52.830 soap-entreprises   m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterEntreprise par le compte services
+00:59:52.924 soap-offres        m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierCompatibilite par le compte services
+00:59:53.038 soap-etudiants     m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterEtudiant par le compte services
+00:59:53.580 rest-notifications m.i.s.n.ServiceNotifications - Notification CONFIRMATION_DEPOT n° 1 à salma.elidrissi@inpt.ac.ma : ENVOYEE
+00:59:53.581 rest-notifications acces - POST /api/v1/notifications -> 201 (460 ms, client services)
+00:59:53.630 rest-notifications m.i.s.n.ServiceNotifications - Notification NOUVELLE_CANDIDATURE_ENTREPRISE n° 2 à contact@novapay-maghreb.ma : ENVOYEE
+00:59:53.631 rest-notifications acces - POST /api/v1/notifications -> 201 (33 ms, client services)
+00:59:53.640 rest-candidatures  acces - POST /api/v1/soumissions -> 202 (1518 ms, client postman)
+01:00:04.892 rest-candidatures  acces - POST /api/v1/candidatures/13/evaluation -> 200 (24 ms, client postman)
+01:00:09.100 soap-etudiants     m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierEtudiant par le compte services
+01:00:09.198 soap-etudiants     m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterEtudiant par le compte services
+01:00:09.293 soap-offres        m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierDisponibilite par le compte services
+01:00:09.388 soap-offres        m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterOffre par le compte services
+01:00:09.485 soap-entreprises   m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP verifierEntreprise par le compte services
+01:00:09.591 soap-entreprises   m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP consulterEntreprise par le compte services
+01:00:09.687 soap-offres        m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP decrementerPlaces par le compte services
+01:00:09.809 rest-notifications acces - POST /api/v1/notifications -> 201 (64 ms, client services)
+01:00:09.809 rest-notifications m.i.s.n.ServiceNotifications - Notification ACCEPTATION n° 4 à salma.elidrissi@inpt.ac.ma : ENVOYEE
+01:00:09.860 rest-suivi         acces - POST /api/v1/stages -> 201 (39 ms, client services)
+01:00:09.960 soap-etudiants     m.i.s.c.s.GestionnaireSecuriteServeur - Appel SOAP changerStatutEtudiant par le compte services
+01:00:09.981 rest-candidatures  acces - POST /api/v1/candidatures/13/decision -> 200 (986 ms, client postman)

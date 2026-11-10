@@ -1,0 +1,99 @@
+\chapter{Sécurité et gestion des erreurs}\label{chap:securite}
+
+\section{Sécurité des échanges SOAP}\label{sec:securite-soap}
+
+Chaque appel à S1, S2 ou S3 doit porter un en-tête WS-Security \emph{UsernameToken} avec un mot de passe de type \emph{PasswordText} (listing~\ref{lst:wsse}). Un gestionnaire JAX-WS commun (\code{GestionnaireSecuriteServeur}) le vérifie avant que la requête n'atteigne le service ; seule la lecture du WSDL reste publique.
+
+\begin{lstlisting}[language=XMLfr, caption={En-tête WS-Security attendu (compte du processus Bonita)}, label={lst:wsse}]
+<wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+  <wsse:UsernameToken>
+    <wsse:Username>bonita</wsse:Username>
+    <wsse:Password>Bonita#Ws2026</wsse:Password>
+  </wsse:UsernameToken>
+</wsse:Security>
+\end{lstlisting}
+
+Quatre comptes de service existent, un par client : \code{portail}, \code{bonita}, \code{services} (appels entre services) et \code{soapui} (tests). Le serveur ne connaît que leurs hachages BCrypt, lus dans la configuration (variable d'environnement \code{SOA\_WS\_COMPTES} en production) ; chaque appel accepté est journalisé avec le nom du compte, ce qui permet de savoir qui a fait quoi.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}X l@{}}
+\toprule
+\textbf{Situation} & \textbf{\code{faultcode}} \\ \midrule
+En-tête de sécurité absent & \code{wsse:InvalidSecurity} \\
+\code{Username} ou \code{Password} manquant & \code{wsse:InvalidSecurity} \\
+Mot de passe de type \emph{digest} & \code{wsse:UnsupportedSecurityToken} \\
+Compte inconnu ou mot de passe faux & \code{wsse:FailedAuthentication} \\
+\bottomrule
+\end{tabularx}
+\caption{Refus d'authentification SOAP}\label{tab:wsse}
+\end{table}
+
+Le mot de passe en clair dans l'en-tête n'est acceptable que sur un canal chiffré : c'est l'objet de la section~\ref{sec:tls}.
+
+\section{Sécurité des API REST}
+
+Chaque client des services REST possède sa clé, transmise dans l'en-tête \code{X-API-Key} : portail, processus Bonita, appels entre services et tests Postman. Les services ne stockent que l'empreinte SHA-256 des clés. Une clé absente ou inconnue donne 401. Certaines opérations sont en outre réservées à certains clients : seul le processus (ou le mode direct) peut enregistrer une candidature ou un rejet, par exemple ; un autre client reçoit 403. Retirer l'accès d'un client revient à supprimer sa clé de la configuration, sans toucher aux autres.
+
+\section{Sécurité du portail}
+
+\begin{itemize}
+  \item \textbf{Mots de passe} hachés par BCrypt ; la comparaison prend le même temps qu'un compte existe ou non.
+  \item \textbf{Sessions} : un jeton aléatoire de 256 bits est remis à la connexion et envoyé ensuite dans \code{Authorization: Bearer}. La base n'en garde que l'empreinte SHA-256 ; la session expire au bout de huit heures et la déconnexion la supprime.
+  \item \textbf{Rôles} vérifiés côté serveur pour chaque ressource (\statut{ETUDIANT}, \statut{ENTREPRISE}, \statut{RESPONSABLE}) : 401 sans session valide, 403 hors de son espace. Une ressource qui appartient à un autre utilisateur (la candidature d'un autre étudiant, le dossier d'une autre entreprise) répond 404, pour ne pas révéler son existence.
+  \item \textbf{Masquage} : quand une entreprise consulte un candidat, le portail masque son courriel et son téléphone (\code{s***@inpt.ac.ma}, \code{06******12}) avant l'envoi. Le test de bout en bout vérifie que le JSON reçu par l'entreprise ne contient aucune coordonnée complète.
+  \item \textbf{Interface} : tout texte venant des données est inséré comme texte (\code{textContent}), jamais comme HTML ; les courriels affichés dans l'interface le sont dans un cadre isolé (\code{iframe sandbox}) sans aucun droit.
+\end{itemize}
+
+\section{Données et configuration}
+
+\begin{itemize}
+  \item \textbf{Moindre privilège en base} : chaque service a son compte MySQL, limité à la lecture et à l'écriture des données de son schéma. Un test de socle vérifie qu'un service ne peut ni lire le schéma d'un autre, ni modifier la structure du sien.
+  \item \textbf{Requêtes paramétrées} partout (\code{PreparedStatement}) : aucune concaténation de données dans le SQL.
+  \item \textbf{Aucun secret dans le code} : adresses, mots de passe, hachages et clés sont dans la configuration et se remplacent par variables d'environnement. Les valeurs du dépôt sont des valeurs de démonstration.
+  \item \textbf{Aucune donnée réelle} : personnes, entreprises et numéros sont fictifs, et les courriels restent dans Mailpit.
+\end{itemize}
+
+\section{Activer TLS en production}\label{sec:tls}
+
+La démonstration fonctionne en HTTP sur une seule machine, sur l'interface locale uniquement (127.0.0.1) : des certificats auto-signés auraient perturbé SoapUI, Postman, Bonita et le navigateur sans rien protéger de plus sur un poste isolé. En production, nous recommandons :
+\begin{enumerate}
+  \item un \textbf{reverse proxy} (Nginx ou un API gateway) devant le portail, avec un certificat d'une autorité reconnue, TLS~1.2 minimum et l'en-tête HSTS ; le portail ne serait plus joignable directement ;
+  \item \textbf{TLS entre services}, avec une autorité de certification interne, et de préférence l'authentification mutuelle (mTLS), qui authentifie aussi le service appelant ;
+  \item conserver WS-Security et les clés d'API par-dessus TLS : TLS protège le transport, les jetons identifient le client applicatif ;
+  \item placer les secrets dans un coffre (variables d'environnement injectées au déploiement) et les renouveler régulièrement.
+\end{enumerate}
+Côté code, seules les adresses changent (\code{https://…}) : elles sont toutes dans la configuration.
+
+\section{Gestion des erreurs}
+
+\subsection{Principes}
+\begin{itemize}
+  \item \textbf{Erreurs prévues, réponses prévues} : faute SOAP typée ou corps JSON uniforme, avec un code stable et un message en français. Aucune trace technique n'est renvoyée au client ; elle est écrite dans le journal du service avec l'identifiant de corrélation.
+  \item \textbf{Validation à l'entrée} : tout champ invalide est signalé, avec la liste complète des problèmes (pas seulement le premier).
+  \item \textbf{Codes justes} : 400 pour une requête illisible, 422 pour des données invalides, 409 pour une règle de gestion, 503 pour une indisponibilité, 500 seulement pour l'inattendu.
+\end{itemize}
+
+\subsection{Indisponibilité d'un service}
+Une panne est traitée à chaque niveau.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Niveau} & \textbf{Comportement} \\ \midrule
+Appel sortant & Délais de connexion (2~s) et de lecture (5 à 8~s) ; l'échec devient une erreur « service indisponible » nommant le service (\code{SERVICE\_OFFRES\_INDISPONIBLE}). \\
+Base de données & Pool de connexions avec délai de 3~s ; l'échec devient 503 (REST) ou \code{ServiceIndisponibleFault} (SOAP) ; \code{GET /health} répond 503. \\
+Processus BPMN & Sous-processus d'erreur : soumission en \statut{ERREUR}, responsable alerté par courriel (chapitre~\ref{chap:bpmn}). \\
+Mode direct & Même comportement : S4 marque la soumission en \statut{ERREUR}, alerte le responsable et répond 503. \\
+Après une acceptation & Si S6 ou S1 ne répondent pas, l'étape échoue mais la décision est conservée ; le responsable relance le suivi une fois le service rétabli (création du stage idempotente). \\
+Portail & Les pages qui composent plusieurs services restent affichées : si S3 est arrêté, la liste des candidatures s'affiche avec « détails momentanément indisponibles » au lieu d'échouer. Le tableau de bord du responsable indique l'état des six services. \\
+\bottomrule
+\end{tabularx}
+\caption{Traitement d'une indisponibilité}\label{tab:pannes}
+\end{table}
+
+Ces comportements sont vérifiés par de vraies pannes : la suite SoapUI arrête S3, S1 puis MySQL et contrôle les fautes renvoyées ; le test de bout en bout arrête S3 pendant un dépôt et vérifie la soumission en erreur, la réponse 503, l'alerte reçue par le responsable et l'état affiché par le portail (chapitre~\ref{chap:tests}).
+
+\subsection{Traçabilité}
+Chaque ligne de journal porte l'identifiant de corrélation de la requête (listing~\ref{lst:trace}). Les historiques métier complètent les journaux techniques : historique des statuts d'une candidature (date, acteur, commentaire), journal des étapes du processus, historique des opérations d'un stage, et historique d'envoi de chaque courriel avec son éventuelle erreur SMTP.

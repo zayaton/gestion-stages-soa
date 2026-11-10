@@ -1,0 +1,17 @@
+% Généré par rapport/outils/generer_tables.py à partir de contracts/src/main/resources/wsdl/etudiants.wsdl. Ne pas modifier.
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.21\linewidth}>{\raggedright\arraybackslash\footnotesize}p{0.22\linewidth}@{}}
+\caption{Opérations SOAP de S1 Étudiants (port 8081, 7 opérations)}\label{tab:soap-etudiants}\\
+\toprule \textbf{Opération} & \textbf{Entrée} & \textbf{Sortie} & \textbf{Fautes métier} \\ \midrule
+\endfirsthead
+\toprule \textbf{Opération} & \textbf{Entrée} & \textbf{Sortie} & \textbf{Fautes métier} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textbf{\texttt{ajouterEtudiant}}\newline {\footnotesize Crée un étudiant.} & \texttt{etudiant} : Etudiant & \texttt{etudiantCree} : Etudiant & \texttt{DonneesInvalides} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{consulterEtudiant}}\newline {\footnotesize Renvoie le profil d'un étudiant.} & \texttt{id} : long & \texttt{etudiant} : Etudiant & \texttt{EtudiantIntrouvable} \\ \midrule
+\textbf{\texttt{listerEtudiants}}\newline {\footnotesize Liste les étudiants selon des critères facultatifs.} & \texttt{filtre} : FiltreEtudiants, facultatif & \texttt{etudiant} : Etudiant[], facultatif & \texttt{DonneesInvalides} \\ \midrule
+\textbf{\texttt{modifierEtudiant}}\newline {\footnotesize Remplace le profil. Un changement de statut suit les mêmes règles que changerStatutEtudiant.} & \texttt{id} : long \newline \texttt{etudiant} : Etudiant & \texttt{etudiantModifie} : Etudiant & \texttt{EtudiantIntrouvable} \newline \texttt{DonneesInvalides} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{supprimerEtudiant}}\newline {\footnotesize Supprime un étudiant, sauf pendant un stage.} & \texttt{id} : long & – & \texttt{EtudiantIntrouvable} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{verifierEtudiant}}\newline {\footnotesize Indique si l'étudiant existe, son statut et s'il peut candidater (R1). Un étudiant inconnu donne existe=false, pas une faute.} & \texttt{id} : long & \texttt{verification} : VerificationEtudiant & \texttt{ServiceIndisponible} \\ \midrule
+\textbf{\texttt{changerStatutEtudiant}}\newline {\footnotesize Change le statut selon les transitions autorisées.} & \texttt{id} : long \newline \texttt{statut} : ACTIF | SUSPENDU | EN\_STAGE | DIPLOME & \texttt{etudiant} : Etudiant & \texttt{EtudiantIntrouvable} \newline \texttt{DonneesInvalides} \newline \texttt{Conflit} \\
+\end{longtable}

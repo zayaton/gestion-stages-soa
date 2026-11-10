@@ -1,0 +1,163 @@
+\chapter{Analyse des besoins}\label{chap:besoins}
+
+\section{Acteurs}
+
+L'analyse du sujet fait apparaître trois acteurs humains et deux acteurs techniques.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Acteur} & \textbf{Rôle} \\ \midrule
+Étudiant & Consulte les offres ouvertes, vérifie sa compatibilité avec chacune, candidate, suit ses candidatures, peut annuler tant que l'évaluation n'a pas commencé, consulte son stage. \\
+Entreprise partenaire & Publie et gère ses offres, reçoit les candidatures, ouvre l'évaluation, accepte, refuse ou demande un complément d'information. \\
+Responsable des stages & Gère les référentiels (étudiants, entreprises), consulte toutes les candidatures, suit les stages (statut, comptes rendus, évaluations), surveille les notifications et l'état des services. \\
+Processus BPMN (Bonita) & Acteur technique : orchestre le traitement d'une candidature en appelant les six services. \\
+Planificateur & Acteur technique : déclenche chaque jour à 8~h les rappels de date limite. \\
+\bottomrule
+\end{tabularx}
+\caption{Acteurs du système}\label{tab:acteurs}
+\end{table}
+
+\section{Besoins fonctionnels}
+
+\subsection{Gestion des référentiels}
+\begin{itemize}
+  \item Créer, consulter, modifier et supprimer un étudiant (matricule, nom, prénom, filière, niveau, coordonnées, compétences) ; changer son statut (\statut{ACTIF}, \statut{SUSPENDU}, \statut{EN\_STAGE}, \statut{DIPLOME}) selon des transitions autorisées ; vérifier son existence et son éligibilité.
+  \item Créer, consulter, modifier et supprimer une entreprise (raison sociale, ICE, secteur, adresse, responsable de contact) ; consulter ses offres.
+  \item Créer, modifier, clôturer et supprimer une offre (titre, description, compétences requises, filières acceptées, niveau minimum, durée, date limite, nombre de places) ; vérifier sa disponibilité et sa compatibilité avec un étudiant.
+\end{itemize}
+
+\subsection{Candidatures}
+\begin{itemize}
+  \item Déposer une candidature avec une lettre de motivation ; obtenir immédiatement le résultat du contrôle (enregistrée, ou rejetée avec la règle et le motif).
+  \item Consulter ses candidatures, leur historique (date, auteur, commentaire de chaque changement) et les étapes du processus.
+  \item Annuler une candidature lorsque les règles le permettent.
+  \item Pour l'entreprise : ouvrir l'évaluation, puis accepter, refuser ou demander un complément.
+\end{itemize}
+
+\subsection{Notifications}
+\begin{itemize}
+  \item Confirmer le dépôt à l'étudiant ; informer l'entreprise d'une nouvelle candidature.
+  \item Notifier l'étudiant d'un rejet (avec le motif), d'une acceptation, d'un refus ou d'une demande de complément.
+  \item Envoyer des rappels aux étudiants compatibles qui n'ont pas encore candidaté à une offre dont la date limite approche.
+\end{itemize}
+
+\subsection{Suivi des stages}
+\begin{itemize}
+  \item Créer le dossier de stage d'une candidature acceptée ; consulter son statut et ses dates.
+  \item Enregistrer les comptes rendus périodiques et les évaluations (note sur 20 et commentaire).
+  \item Consulter l'historique des stages d'un étudiant.
+\end{itemize}
+
+\section{Besoins non fonctionnels}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Exigence} & \textbf{Réponse apportée} \\ \midrule
+Autonomie des services & Un processus, un port et un schéma de base par service ; aucun accès direct aux données d'un autre service. \\
+Contrats explicites & WSDL pour S1 à S3, OpenAPI pour S4 à S6, versionnés dans le dépôt ; le code est vérifié contre ces contrats par des tests. \\
+Sécurité & WS-Security UsernameToken (SOAP), clé d'API par client (REST), sessions et rôles au portail, mots de passe hachés (BCrypt), masquage des coordonnées. \\
+Robustesse & Délais d'attente sur tous les appels, réponse 503 explicite, sous-processus d'erreur BPMN, alerte au responsable. \\
+Traçabilité & Historique de chaque changement de statut ; identifiant de corrélation propagé dans tous les appels. \\
+Langue & Messages, erreurs, courriels et interface en français. \\
+\bottomrule
+\end{tabularx}
+\caption{Besoins non fonctionnels}\label{tab:non-fonctionnels}
+\end{table}
+
+\section{Cas d'utilisation}
+
+La figure~\ref{fig:cas-utilisation} regroupe les principaux cas d'utilisation. Le dépôt d'une candidature \emph{inclut} son traitement par le processus, qui lui-même inclut les vérifications et l'envoi des notifications.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  cas/.style={ellipse, draw=inpt, fill=inptpale, line width=0.6pt, minimum width=36mm, minimum height=7.5mm, inner sep=1pt, align=center, text width=31mm},
+  acteur/.style={align=center, font=\sffamily\scriptsize},
+  lien/.style={draw=encre2, line width=0.45pt},
+  inclut/.style={draw=encre2, dashed, -{Stealth[length=2mm]}, line width=0.45pt},
+]
+\newcommand{\bonhomme}[2]{%
+  \begin{scope}[shift={(#1)}]
+    \draw[encre, line width=0.7pt] (0,0.42) circle (0.13);
+    \draw[encre, line width=0.7pt] (0,0.29) -- (0,-0.05) (-0.2,0.18) -- (0.2,0.18) (0,-0.05) -- (-0.15,-0.3) (0,-0.05) -- (0.15,-0.3);
+    \node[acteur, below] at (0,-0.32) {#2};
+  \end{scope}}
+
+% Système
+\draw[filet, line width=0.8pt] (-4.2,-8.15) rectangle (4.2,5.15);
+\node[font=\titres\small\bfseries, anchor=north west, text=encre2] at (-4.1,5.1) {Plateforme des stages};
+
+% Cas étudiant
+\node[cas] (offres) at (-2.05,4.2) {Consulter les offres et la compatibilité};
+\node[cas] (deposer) at (-2.05,3.1) {Déposer une candidature};
+\node[cas] (suivre) at (-2.05,2.0) {Suivre ses candidatures (historique, processus)};
+\node[cas] (annuler) at (-2.05,0.9) {Annuler une candidature};
+\node[cas] (stage) at (-2.05,-0.2) {Consulter son stage et ses courriels};
+
+% Cas entreprise
+\node[cas] (publier) at (2.05,4.2) {Publier et gérer ses offres};
+\node[cas] (recevoir) at (2.05,3.1) {Consulter les candidatures reçues};
+\node[cas] (evaluer) at (2.05,2.0) {Ouvrir l'évaluation};
+\node[cas] (decider) at (2.05,0.9) {Décider : accepter, refuser, demander un complément};
+
+% Processus
+\node[cas, fill=white] (traiter) at (0,-1.5) {Traiter la candidature (processus BPMN)};
+\node[cas, fill=white] (verifier) at (-2.05,-2.75) {Vérifier étudiant, offre, entreprise (R1 à R7)};
+\node[cas, fill=white] (notifier) at (2.05,-2.75) {Notifier par courriel};
+\node[cas, fill=white] (creerstage) at (2.05,-1.5) {Créer le dossier de stage (R10)};
+
+% Cas responsable
+\node[cas] (referentiels) at (-2.05,-4.15) {Gérer étudiants et entreprises};
+\node[cas] (toutes) at (2.05,-4.15) {Consulter toutes les candidatures};
+\node[cas] (suivistage) at (-2.05,-5.3) {Suivre les stages (comptes rendus, évaluations)};
+\node[cas] (rappels) at (2.05,-5.3) {Envoyer les rappels de date limite};
+\node[cas] (supervision) at (0,-6.5) {Superviser les notifications et l'état des services};
+\node[cas, fill=white] (connexion) at (0,-7.55) {S'authentifier};
+
+% Acteurs
+\bonhomme{-6.0,2.2}{Étudiant}
+\bonhomme{6.0,2.6}{Entreprise}
+\bonhomme{-6.0,-5.0}{Responsable\\des stages}
+\node[draw=encre2, font=\sffamily\scriptsize, align=center, inner sep=3pt] (bonita) at (6.0,-1.6) {«\,système\,»\\Processus\\Bonita};
+\node[draw=encre2, font=\sffamily\scriptsize, align=center, inner sep=3pt] (planif) at (6.0,-5.3) {«\,système\,»\\Planificateur};
+
+\coordinate (E) at (-5.75,2.3); \coordinate (P) at (5.75,2.7); \coordinate (R) at (-5.75,-4.9);
+\foreach \c in {offres, deposer, suivre, annuler, stage} \draw[lien] (E) -- (\c.west);
+\foreach \c in {publier, recevoir, evaluer, decider} \draw[lien] (P) -- (\c.east);
+\foreach \c in {referentiels, suivistage, toutes, rappels, supervision} \draw[lien] (R) -- (\c);
+\draw[lien] (bonita) -- (traiter.east);
+\draw[lien] (planif) -- (rappels.east);
+
+\draw[inclut] (deposer.south) .. controls (-0.8,1.2) and (-0.4,-0.6) .. node[pos=0.55, fill=white, inner sep=1pt, font=\sffamily\tiny] {«\,inclut\,»} (traiter.north);
+\draw[inclut] (decider.south) .. controls (1.2,-0.2) .. (traiter.north east);
+\draw[inclut] (traiter) -- (verifier);
+\draw[inclut] (traiter) -- (notifier);
+\draw[inclut] (traiter) -- (creerstage);
+\end{tikzpicture}
+\caption{Diagramme des cas d'utilisation}\label{fig:cas-utilisation}
+\end{figure}
+
+\section{Statuts manipulés}
+
+Quatre cycles de vie structurent le métier. Leurs transitions sont contrôlées par les services eux-mêmes : une transition non prévue est refusée avec une erreur de conflit (faute \code{ConflitFault} en SOAP, code HTTP 409 en REST).
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Objet} & \textbf{Statuts et transitions autorisées} \\ \midrule
+Étudiant (S1) & \statut{ACTIF} $\rightarrow$ \statut{SUSPENDU}, \statut{EN\_STAGE}, \statut{DIPLOME} ; \statut{SUSPENDU} $\rightarrow$ \statut{ACTIF} ; \statut{EN\_STAGE} $\rightarrow$ \statut{ACTIF}, \statut{DIPLOME} \\
+Offre (S3) & \statut{BROUILLON}, \statut{ACTIVE}, \statut{POURVUE} (plus aucune place), \statut{CLOTUREE} \\
+Candidature (S4) & \statut{DEPOSEE} $\rightarrow$ \statut{EN\_COURS\_EVALUATION} $\rightarrow$ \statut{ACCEPTEE} ou \statut{REFUSEE} ; \statut{DEPOSEE} $\rightarrow$ \statut{ANNULEE} (règle R9) \\
+Stage (S6) & \statut{PLANIFIE} $\rightarrow$ \statut{EN\_COURS} ou \statut{INTERROMPU} ; \statut{EN\_COURS} $\rightarrow$ \statut{TERMINE} ou \statut{INTERROMPU} \\
+\bottomrule
+\end{tabularx}
+\caption{Cycles de vie des principaux objets}\label{tab:statuts}
+\end{table}
+
+Une \textbf{soumission} (S4) précède la candidature : c'est la demande de l'étudiant telle qu'elle entre dans le processus. Elle devient \statut{ENREGISTREE} (une candidature est alors créée), \statut{REJETEE} (avec la règle violée et le motif) ou \statut{ERREUR} (un service n'a pas répondu). Cette distinction garde une trace des dépôts refusés sans les compter comme des candidatures.

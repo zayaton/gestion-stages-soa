@@ -1,0 +1,16 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:etu="http://stages.inpt.ma/etudiants">
+  <soapenv:Header>
+    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+      <wsse:UsernameToken>
+        <wsse:Username>soapui</wsse:Username>
+        <wsse:Password>SoapUI#Ws2026</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+    <cor:CorrelationId xmlns:cor="http://stages.inpt.ma/commun">rapport-0001</cor:CorrelationId>
+  </soapenv:Header>
+  <soapenv:Body>
+    <etu:consulterEtudiant>
+      <etu:id>9999</etu:id>
+    </etu:consulterEtudiant>
+  </soapenv:Body>
+</soapenv:Envelope>

@@ -1,0 +1,17 @@
+GET /api/v1/candidatures/13/stage
+X-Correlation-Id: rapport-0001
+X-API-Key: cle-postman-2026-Rb3WsE
+
+--> HTTP 200
+{
+  "id": 4,
+  "candidatureId": 13,
+  "etudiantId": 1,
+  "offreId": 1,
+  "entrepriseId": 1,
+  "dateDebut": "2026-12-10",
+  "dateFin": "2027-03-04",
+  "encadrantEntreprise": "Ghita Sentissi",
+  "statut": "PLANIFIE",
+  "creeLe": "2026-11-10T01:00:09"
+}

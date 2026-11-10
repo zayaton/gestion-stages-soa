@@ -1,0 +1,230 @@
+\chapter{Architecture orientée services}\label{chap:architecture}
+
+\section{Vue d'ensemble}
+
+La plateforme est composée de six services métier, d'un orchestrateur et d'un portail (figure~\ref{fig:architecture}). Chaque service est un processus Java distinct, démarré seul, avec son port et son schéma de base de données. Les services de référentiel (S1 à S3) exposent des opérations SOAP ; les services de traitement (S4 à S6) exposent des ressources REST.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  svc/.style={draw=inpt, fill=inptpale, line width=0.7pt, minimum width=30mm, minimum height=14mm, align=center},
+  ext/.style={draw=encre2, fill=white, line width=0.6pt, minimum width=30mm, minimum height=11mm, align=center},
+  couche/.style={draw=filet, line width=0.8pt, rounded corners=1pt, inner sep=3.5mm},
+  appel/.style={-{Stealth[length=2.2mm]}, line width=0.65pt},
+  etiq/.style={font=\sffamily\tiny, fill=white, inner sep=1.5pt},
+]
+% Clients et orchestration
+\node[ext] (nav) at (-3.6,8.6) {\textbf{Navigateur}\\étudiant, entreprise, responsable};
+\node[svc] (portail) at (-3.6,6.6) {\textbf{Portail} · 8090\\interface, sessions, rôles,\\masquage \quad\textcolor{encre2}{\tiny soa\_portail}};
+\node[ext] (mail) at (0,6.6) {\textbf{Mailpit}\\SMTP 1025 · web 8025};
+\node[ext, minimum height=14mm] (bonita) at (3.6,6.6) {\textbf{Bonita} · 8080\\processus BPMN\\« Candidature »};
+\node[ext] (outils) at (3.6,8.6) {\textbf{SoapUI, Postman}\\tests des services};
+
+% Couche REST
+\node[svc] (s4) at (-3.6,3.6) {\textbf{S4 Candidatures}\\REST · 8084\\\textcolor{encre2}{\tiny soa\_candidatures}};
+\node[svc] (s5) at (0,3.6) {\textbf{S5 Notifications}\\REST · 8085\\\textcolor{encre2}{\tiny soa\_notifications}};
+\node[svc] (s6) at (3.6,3.6) {\textbf{S6 Suivi des stages}\\REST · 8086\\\textcolor{encre2}{\tiny soa\_suivi}};
+% Couche SOAP
+\node[svc] (s1) at (-3.6,0.4) {\textbf{S1 Étudiants}\\SOAP · 8081\\\textcolor{encre2}{\tiny soa\_etudiants}};
+\node[svc] (s2) at (0,0.4) {\textbf{S2 Entreprises}\\SOAP · 8082\\\textcolor{encre2}{\tiny soa\_entreprises}};
+\node[svc] (s3) at (3.6,0.4) {\textbf{S3 Offres}\\SOAP · 8083\\\textcolor{encre2}{\tiny soa\_offres}};
+
+\begin{scope}[on background layer]
+  \node[couche, fit=(s4)(s6)] (rest) {};
+  \node[couche, fit=(s1)(s3)] (soap) {};
+\end{scope}
+\node[anchor=north east, font=\sffamily\tiny\bfseries, text=encre2, inner sep=2pt] at (rest.north east) {SERVICES REST (JAX-RS) · clé d'API};
+\node[anchor=north east, font=\sffamily\tiny\bfseries, text=encre2, inner sep=2pt] at (soap.north east) {SERVICES SOAP (JAX-WS) · WS-Security};
+
+% Appels
+\draw[appel] (nav) -- node[etiq, right] {HTTP, JSON} (portail);
+\draw[appel] (outils) -- (bonita.north -| outils.south) ;
+\draw[appel, draw=encre2] (outils.east) -- ++(1.2,0) |- node[etiq, pos=0.28, right] {tests} (soap.east);
+\draw[appel] (portail.south) -- node[etiq, right, pos=0.42] {REST} (portail.south |- rest.north);
+\draw[appel] (portail.west) -- ++(-0.9,0) |- node[etiq, pos=0.25, left] {SOAP} (soap.west);
+\draw[appel, dashed] ([xshift=-4mm]s4.north east) |- node[etiq, above, pos=0.62] {démarre le cas, transmet la décision} (2.4,5.15) -- (2.4,5.9);
+\draw[appel] (bonita.south) -- node[etiq, right, pos=0.42] {connecteurs REST} (bonita.south |- rest.north);
+\draw[appel] (bonita.east) -- ++(0.75,0) |- node[etiq, pos=0.25, right] {connecteurs SOAP} ([yshift=3mm]soap.east);
+\draw[appel] (s4) -- (s5);
+\draw[appel] (s4.south east) .. controls (-0.9,2.4) and (1.4,2.4) .. node[etiq, pos=0.5] {suivi} (s6.south west);
+\draw[appel] (s4.south) -- node[etiq, right, pos=0.45] {mode direct : R1 à R7, R10} (s4.south |- soap.north);
+\draw[appel] (s5.north) -- (mail.south);
+\draw[appel, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (s2) -- (s3);
+\draw[appel] (s3.south) .. controls (3.0,-1.25) and (-3.0,-1.25) .. node[etiq, pos=0.5] {profil de l'étudiant (R7)} (s1.south);
+
+\node[anchor=north, font=\sffamily\tiny, text=encre2, align=center] at (0,-1.9)
+  {Une base MySQL 8.4 (Docker, port 3307) : un schéma et un compte par service, nommés sous chaque service.\\Tous les appels portent l'identifiant de corrélation ; en mode bonita, S4 ne vérifie rien lui-même : le processus appelle les services.};
+\end{tikzpicture}
+\caption{Architecture de la plateforme}\label{fig:architecture}
+\end{figure}
+
+\section{Rôle de chaque composant}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l l >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Composant} & \textbf{Style} & \textbf{Port} & \textbf{Responsabilité} \\ \midrule
+S1 Étudiants & SOAP & 8081 & Référentiel des étudiants ; vérification d'éligibilité (R1) ; statut \statut{EN\_STAGE} (R10). \\
+S2 Entreprises & SOAP & 8082 & Référentiel des entreprises et de leur contact ; vérification (R2) ; offres d'une entreprise. \\
+S3 Offres & SOAP & 8083 & Offres, disponibilité (R2 à R4), compatibilité avec un étudiant (R7), retrait atomique d'une place (R10). \\
+S4 Candidatures & REST & 8084 & Soumissions, candidatures, historique, journal des étapes ; règles R5, R6, R8, R9 ; déclenche le processus. \\
+S5 Notifications & REST & 8085 & Courriels HTML (gabarits en français), historique d'envoi, rappels quotidiens de date limite. \\
+S6 Suivi des stages & REST & 8086 & Dossiers de stage, comptes rendus, évaluations, historique. \\
+Bonita & REST (API Bonita) & 8080 & Exécute le processus BPMN « Candidature » et appelle les six services par ses connecteurs. \\
+Portail & HTTP, JSON & 8090 & Interface web, authentification, rôles, masquage, composition des réponses de plusieurs services. \\
+\bottomrule
+\end{tabularx}
+\caption{Composants et responsabilités}\label{tab:composants}
+\end{table}
+
+\section{Principes retenus}
+
+\paragraph{Contrat d'abord.} Les trois WSDL et les trois contrats OpenAPI ont été écrits avant le code. Les classes Java des services SOAP et de leurs clients sont générées à partir des WSDL par \code{wsimport} : un service ne peut pas s'écarter de son contrat sans que la compilation échoue. Pour REST, un test compare les routes réellement exposées par Jersey avec celles du contrat OpenAPI, dans les deux sens.
+
+\paragraph{Une base par service.} MySQL héberge sept schémas (\code{soa\_etudiants}, \code{soa\_entreprises}, \code{soa\_offres}, \code{soa\_candidatures}, \code{soa\_notifications}, \code{soa\_suivi}, \code{soa\_portail}). Chaque service se connecte avec un compte qui n'a de droits que sur son schéma, et seulement en lecture et écriture des données (pas de modification de structure). Une jointure entre deux domaines est donc impossible : le service S4 qui veut le titre d'une offre doit appeler S3.
+
+\paragraph{Couplage faible.} Un service connaît les autres par leur adresse, lue dans la configuration, et par leur contrat. Les adresses, délais, comptes et clés se règlent par variables d'environnement, sans recompilation. Tous les appels sortants ont un délai de connexion de 2~s et un délai de lecture de 5~s (SOAP) ou 8~s (REST) : un service lent ne bloque jamais indéfiniment son appelant.
+
+\paragraph{Corrélation.} Chaque requête reçoit un identifiant de corrélation (en-tête HTTP \code{X-Correlation-Id}, en-tête SOAP \code{CorrelationId}), créé par le premier service s'il est absent, puis transmis à tous les appels qui en découlent et écrit dans chaque ligne de journal.
+
+\section{Interactions entre services}
+
+Le tableau~\ref{tab:interactions} indique, pour chaque appelant, les services sollicités et les opérations utilisées.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l >{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Appelant} & \textbf{Appelé} & \textbf{Opérations et motif} \\ \midrule
+S4 (mode direct) ou Bonita & S1 & \code{verifierEtudiant} (R1), \code{consulterEtudiant}, \code{changerStatutEtudiant} (R10) \\
+ & S2 & \code{verifierEntreprise} (R2), \code{consulterEntreprise} \\
+ & S3 & \code{verifierDisponibilite} (R2 à R4), \code{consulterOffre}, \code{verifierCompatibilite} (R7), \code{decrementerPlaces} (R10) \\
+ & S4 & contrôles R5 et R6, enregistrement, statut (appels du processus Bonita) \\
+ & S5 & \code{POST /notifications} (dépôt, rejet, entreprise, résultat, complément, alerte) \\
+ & S6 & \code{POST /stages} (R10) \\
+S2 & S3 & offres d'une entreprise (\code{consulterOffresEntreprise}) \\
+S3 & S1, S2 & profil de l'étudiant pour la compatibilité, entreprise d'une offre \\
+S5 (rappels) & S1, S3, S4 & étudiants actifs, offres proches de leur date limite, candidatures déjà déposées \\
+Portail & S1 à S6 & toutes les opérations de consultation et de gestion des trois espaces \\
+\bottomrule
+\end{tabularx}
+\caption{Matrice des interactions}\label{tab:interactions}
+\end{table}
+
+\section{Deux modes d'orchestration}
+
+Le processus de référence est le processus BPMN exécuté par Bonita (chapitre~\ref{chap:bpmn}). S4 le déclenche à chaque dépôt et lui transmet la décision de l'entreprise. Pour le développement et les tests automatiques, qui ne peuvent pas dépendre d'un logiciel de bureau, S4 propose un second mode, \code{direct}, qui exécute en Java les mêmes étapes, dans le même ordre, avec les mêmes appels. Le mode se choisit au démarrage (\code{ORCHESTRATION\_MODE=bonita} ou \code{direct}) ; il est \code{bonita} par défaut.
+
+Les deux modes écrivent le même journal d'étapes (table \code{etape\_processus}), dont les noms sont les identifiants des nœuds du diagramme BPMN. Le portail colore donc le diagramme de la même façon quel que soit le mode, et le test de bout en bout passe à l'identique dans les deux.
+
+\section{Parcours d'une candidature}
+
+La figure~\ref{fig:sequence} montre les appels déclenchés par le dépôt d'une candidature puis par son acceptation. L'orchestrateur est S4 en mode direct ou Bonita en mode bonita : les appels aux services sont les mêmes.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\tiny, x=1cm, y=-0.47cm,
+  tete/.style={draw=inpt, fill=inptpale, minimum width=17mm, minimum height=6mm, align=center, font=\sffamily\scriptsize\bfseries},
+  msg/.style={-{Stealth[length=1.6mm]}, line width=0.5pt},
+  ret/.style={-{Stealth[length=1.6mm]}, dashed, draw=encre2, line width=0.45pt},
+  lbl/.style={above, inner sep=1pt, fill=white, fill opacity=0.85, text opacity=1},
+]
+\def\fin{29.6}
+\foreach \x/\n/\t in {0/P/Portail, 2.3/O/{S4 ou Bonita}, 4.6/A/S1, 6.9/B/S2, 9.2/C/S3, 11.5/D/S5, 13.8/E/S6} {
+  \node[tete] (\n) at (\x,0) {\t};
+  \draw[filet, line width=0.6pt] (\x,0.7) -- (\x,\fin);
+}
+\fill[inptpale] (2.2,1.3) rectangle (2.4,13.6);
+\fill[inptpale] (2.2,16.2) rectangle (2.4,28.4);
+
+\draw[msg] (0,1.4) -- node[lbl] {POST /soumissions} (2.3,1.4);
+\draw[msg] (2.3,2.4) -- node[lbl, pos=0.5] {verifierEtudiant (R1)} (4.6,2.4);
+\draw[ret] (4.6,3.2) -- node[lbl] {éligible} (2.3,3.2);
+\draw[msg] (2.3,4.2) -- node[lbl, pos=0.75] {verifierDisponibilite, consulterOffre (R2 à R4)} (9.2,4.2);
+\draw[msg] (2.3,5.4) -- node[lbl, pos=0.62] {verifierEntreprise (R2)} (6.9,5.4);
+\draw[msg] (2.3,6.6) -- node[lbl, pos=0.75] {verifierCompatibilite (R7)} (9.2,6.6);
+\draw[ret] (9.2,7.4) -- node[lbl, pos=0.3] {compatible} (2.3,7.4);
+\node[draw=encre2, fill=white, align=left, anchor=west, font=\sffamily\tiny] at (2.5,8.7) {contrôles R5 (doublon), R6 (5 actives) ;\\passerelle : conditions satisfaites $\rightarrow$ enregistrement};
+\draw[msg] (2.3,10.3) -- node[lbl, pos=0.85] {POST /notifications : confirmation (étudiant)} (11.5,10.3);
+\draw[msg] (2.3,11.5) -- node[lbl, pos=0.85] {POST /notifications : nouvelle candidature (entreprise)} (11.5,11.5);
+\draw[ret] (2.3,12.9) -- node[lbl] {202 ENREGISTREE} (0,12.9);
+
+\node[font=\sffamily\scriptsize\itshape, text=encre2, anchor=west] at (-0.4,14.9) {… l'entreprise ouvre l'évaluation, puis décide :};
+
+\draw[msg] (0,16.6) -- node[lbl] {POST /decision} (2.3,16.6);
+\draw[msg] (2.3,17.8) -- node[lbl, pos=0.75] {decrementerPlaces (R10)} (9.2,17.8);
+\draw[ret] (9.2,18.6) -- node[lbl, pos=0.3] {places restantes} (2.3,18.6);
+\node[draw=encre2, fill=white, anchor=west, font=\sffamily\tiny] at (2.5,19.9) {statut ACCEPTEE, historique};
+\draw[msg] (2.3,21.3) -- node[lbl, pos=0.85] {POST /notifications : acceptation} (11.5,21.3);
+\draw[msg] (2.3,22.7) -- node[lbl, pos=0.88] {POST /stages (R10)} (13.8,22.7);
+\draw[ret] (13.8,23.5) -- node[lbl, pos=0.12] {201} (2.3,23.5);
+\draw[msg] (2.3,24.9) -- node[lbl, pos=0.5] {changerStatutEtudiant} (4.6,24.9);
+\draw[ret] (4.6,25.7) -- node[lbl] {EN\_STAGE} (2.3,25.7);
+\draw[ret] (2.3,27.4) -- node[lbl] {200 ACCEPTEE} (0,27.4);
+\end{tikzpicture}
+\caption{Diagramme de séquence : dépôt puis acceptation d'une candidature}\label{fig:sequence}
+\end{figure}
+
+\subsection{Trace réelle dans les journaux}
+
+Le listing~\ref{lst:trace} reproduit les lignes de journal de tous les services qui portent l'identifiant de corrélation d'un même dossier : dépôt, ouverture de l'évaluation et acceptation. Il a été produit par le script \code{rapport/outils/capturer\_exemples.py}, sur la pile en mode direct, sans retouche autre que le regroupement des fichiers par ordre chronologique (colonnes : heure, service, message).
+
+\lstinputlisting[caption={Une candidature traverse les six services (identifiant de corrélation commun)}, label={lst:trace}, basicstyle=\ttfamily\tiny, language={}]{generes/exemples/trace-correlation.txt}
+
+On y lit l'ordre exact des étapes : vérifications SOAP auprès de S1, S3 et S2, enregistrement, deux notifications, réponse \code{202} au bout de quelques centaines de millisecondes ; puis, lors de la décision, retrait de la place dans S3, courriel d'acceptation, création du stage dans S6 et passage de l'étudiante au statut \statut{EN\_STAGE} dans S1. Chaque appel SOAP est attribué au compte de service qui l'a fait (\code{services}).
+
+\section{Modèle de données}
+
+Chaque service possède ses tables (figure~\ref{fig:donnees}). Les identifiants d'un autre domaine (\code{etudiant\_id} dans une candidature, par exemple) sont des références logiques, sans clé étrangère, puisqu'ils désignent des données d'une autre base : leur cohérence est garantie par les vérifications du processus.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\sffamily\tiny,
+  table/.style={draw=encre2, fill=white, rectangle split, rectangle split parts=2, rectangle split part fill={inptpale,white}, align=left, text width=31mm, inner sep=2.5pt},
+  schema/.style={draw=filet, dashed, inner sep=3mm},
+  titre/.style={font=\sffamily\scriptsize\bfseries, text=inpt, anchor=south west},
+]
+\node[table] (etu) at (0,0) {\textbf{etudiant}\nodepart{two}id, matricule (unique), nom, prénom, filière, niveau, email (unique), téléphone, ville, statut};
+\node[table, below=2mm of etu] (etuc) {\textbf{etudiant\_competence}\nodepart{two}etudiant\_id, competence};
+\node[table] (ent) at (4.2,0) {\textbf{entreprise}\nodepart{two}id, raison\_sociale, ice (unique), secteur, adresse, ville, email, téléphone, contact (nom, fonction, email, téléphone), statut};
+\node[table] (off) at (8.4,0) {\textbf{offre}\nodepart{two}id, titre, description, durée, date\_limite, nombre\_places, niveau\_minimum, ville, entreprise\_id, statut};
+\node[table, below=2mm of off] (offf) {\textbf{offre\_filiere}, \textbf{offre\_competence}\nodepart{two}offre\_id, filière / compétence};
+
+\node[table] (sou) at (0,-4.6) {\textbf{soumission}\nodepart{two}id, etudiant\_id, offre\_id, lettre, statut, regle\_rejetee, motif\_rejet, bonita\_case\_id};
+\node[table, below=2mm of sou] (cand) {\textbf{candidature}\nodepart{two}id, soumission\_id, etudiant\_id, offre\_id, entreprise\_id, lettre, score, statut ; unique (etudiant, offre, non annulée)};
+\node[table, right=3mm of sou] (hist) {\textbf{candidature\_historique}\nodepart{two}candidature\_id, ancien et nouveau statut, date, acteur, commentaire};
+\node[table, below=2mm of hist] (etape) {\textbf{etape\_processus}\nodepart{two}soumission\_id, étape, résultat, détail, date, acteur};
+
+\node[table] (notif) at (8.4,-4.6) {\textbf{notification}\nodepart{two}id, type, destinataire, sujet, corps HTML, date\_envoi, statut (ENVOYEE, ECHEC), erreur, candidature\_id, offre\_id, correlation\_id};
+
+\node[table] (stage) at (0,-9.6) {\textbf{stage}\nodepart{two}id, candidature\_id (unique), etudiant\_id, offre\_id, entreprise\_id, dates, encadrants, statut};
+\node[table, right=3mm of stage] (cr) {\textbf{compte\_rendu}, \textbf{evaluation}\nodepart{two}stage\_id, période, contenu, auteur / note (0 à 20), commentaire, évaluateur};
+\node[table, right=3mm of cr] (sh) {\textbf{stage\_historique}\nodepart{two}stage\_id, opération, détail, date, acteur};
+
+\begin{scope}[on background layer]
+\node[schema, fit=(etu)(etuc)] (S1) {}; \node[titre] at (S1.north west) {S1 · soa\_etudiants};
+\node[schema, fit=(ent)] (S2) {}; \node[titre] at (S2.north west) {S2 · soa\_entreprises};
+\node[schema, fit=(off)(offf)] (S3) {}; \node[titre] at (S3.north west) {S3 · soa\_offres};
+\node[schema, fit=(sou)(cand)(hist)(etape)] (S4) {}; \node[titre] at (S4.north west) {S4 · soa\_candidatures};
+\node[schema, fit=(notif)] (S5) {}; \node[titre] at (S5.north west) {S5 · soa\_notifications};
+\node[schema, fit=(stage)(cr)(sh)] (S6) {}; \node[titre] at (S6.north west) {S6 · soa\_suivi};
+\end{scope}
+\draw[-{Stealth[length=1.5mm]}, draw=encre2] (cand.north) -- (sou.south);
+\draw[-{Stealth[length=1.5mm]}, draw=encre2] (hist.west) -- ++(-1.5mm,0) |- (cand.east);
+\draw[-{Stealth[length=1.5mm]}, draw=encre2] (etape.west) -- (sou.east |- etape.west);
+\end{tikzpicture}
+\caption{Modèle de données, un schéma par service}\label{fig:donnees}
+\end{figure}
+
+Trois choix de modélisation portent des règles de gestion directement dans la base, en plus des contrôles applicatifs :
+\begin{itemize}
+  \item \regle{R5} : une colonne calculée \code{non\_annulee} vaut 1 pour une candidature non annulée et \code{NULL} sinon ; l'index unique (\code{etudiant\_id}, \code{offre\_id}, \code{non\_annulee}) interdit deux candidatures actives pour le même couple, tout en permettant de recandidater après une annulation (MySQL accepte plusieurs \code{NULL} dans un index unique) ;
+  \item \regle{R6} : l'enregistrement prend un verrou nommé par étudiant (\code{GET\_LOCK}) avant de compter ses candidatures actives, pour que deux dépôts simultanés ne dépassent pas la limite de cinq ;
+  \item \regle{R10} : le retrait d'une place est une seule requête \code{UPDATE} conditionnelle (places > 0), qui passe l'offre à \statut{POURVUE} quand le compteur atteint zéro : deux acceptations simultanées ne peuvent pas consommer la même place.
+\end{itemize}
+
+La table \code{soa\_portail.session} ne conserve que l'empreinte SHA-256 du jeton de session, et \code{compte} le hachage BCrypt du mot de passe : une fuite de la base ne donne accès à aucune session ni à aucun mot de passe.

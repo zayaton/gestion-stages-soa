@@ -1,0 +1,118 @@
+\chapter{Déploiement et guide d'exécution}\label{chap:deploiement}
+
+\section{Prérequis}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Outil} & \textbf{Version} & \textbf{Usage} \\ \midrule
+JDK & 17 & Compilation et exécution des services (les scripts vérifient la version). \\
+Maven & 3.9 & Construction du projet multi-module. \\
+Docker Desktop & avec WSL~2 & MySQL 8.4, Mailpit et Adminer. \\
+Bonita Studio Community & 2025.2 & Exécution du processus BPMN (mode bonita). \\
+SoapUI Open Source & 5.10 & Tests SOAP. \\
+Node.js & LTS & Newman, test de bout en bout, Playwright (installés automatiquement par les scripts). \\
+Microsoft Edge & – & Parcours de l'interface par Playwright. \\
+\bottomrule
+\end{tabularx}
+\caption{Logiciels nécessaires}\label{tab:prerequis}
+\end{table}
+
+Tous les scripts sont en PowerShell et se lancent depuis la racine du projet. Si Windows refuse leur exécution : \code{Set-ExecutionPolicy -Scope CurrentUser RemoteSigned}.
+
+\section{Démarrage}
+
+\begin{lstlisting}[language={}, caption={Démarrage complet}]
+.\scripts\start-all.ps1 -Rebuild -Orchestration direct   # construit, demarre Docker puis les 7 services
+.\scripts\check-health.ps1                               # etat de chaque service
+\end{lstlisting}
+
+\code{start-all.ps1} démarre les conteneurs (MySQL, Mailpit, Adminer), attend que MySQL soit prêt, puis lance chaque service dans son propre processus Java, journal dans \code{logs/}. Il affiche ensuite l'état de chacun (\code{GET /health}) et le mode d'orchestration. Au premier démarrage, MySQL crée les sept schémas, les comptes de service et les données de démonstration (\code{db/init}).
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Composant} & \textbf{Adresse} \\ \midrule
+Interface (portail) & \url{http://localhost:8090} \\
+Services SOAP (WSDL) & \url{http://localhost:8081/ws/etudiants?wsdl}, \code{:8082/ws/entreprises?wsdl}, \code{:8083/ws/offres?wsdl} \\
+Services REST (Swagger UI) & \url{http://localhost:8084/docs/}, \code{:8085/docs/}, \code{:8086/docs/} \\
+Boîte de courriel Mailpit & \url{http://localhost:8025} \\
+Administration MySQL (Adminer) & \url{http://localhost:8088} (serveur \code{mysql}) \\
+Bonita & \url{http://localhost:8080/bonita} \\
+\bottomrule
+\end{tabularx}
+\caption{Adresses utiles}\label{tab:adresses}
+\end{table}
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Rôle} & \textbf{Identifiant} & \textbf{Mot de passe} \\ \midrule
+Responsable des stages & \code{responsable@inpt.ac.ma} & \code{Responsable@2026} \\
+Étudiante & \code{salma.elidrissi@inpt.ac.ma} & \code{Etudiant@2026} \\
+Entreprise & \code{contact@novapay-maghreb.ma} & \code{Entreprise@2026} \\
+\bottomrule
+\end{tabular}
+\caption{Comptes de démonstration (tous les étudiants et entreprises ont un compte)}\label{tab:comptes}
+\end{table}
+
+\section{Mode d'orchestration}
+
+\begin{itemize}
+  \item \textbf{bonita} (par défaut) : le processus doit être déployé dans Bonita Studio, en suivant \code{docs/bonita/GUIDE\_BONITA.md} (import du fichier BPMN, contrat, connecteurs, classe Groovy, déploiement). S4 vérifie au démarrage que Bonita répond ; sinon, \code{start-all} l'indique et les dépôts répondent 503.
+  \item \textbf{direct} : aucune dépendance à Bonita ; S4 exécute les mêmes étapes. C'est le mode des tests automatiques.
+\end{itemize}
+
+Le mode se choisit au démarrage : \code{start-all.ps1 -Orchestration bonita} ou \code{direct}.
+
+\section{Configuration}
+
+Chaque paramètre a une valeur par défaut adaptée à la démonstration et peut être remplacé, sans recompiler, par une variable d'environnement (nom en majuscules, points remplacés par des soulignés : \code{soa.db.port} devient \code{SOA\_DB\_PORT}).
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Variable} & \textbf{Rôle} \\ \midrule
+\code{ORCHESTRATION\_MODE} & \code{bonita} ou \code{direct} \\
+\code{SOA\_DB\_HOTE}, \code{SOA\_DB\_PORT}, \code{SOA\_DB\_PASSWORD} & Base de données \\
+\code{SOA\_WS\_URL\_*}, \code{SOA\_REST\_URL\_*} & Adresse de chaque service appelé \\
+\code{SOA\_WS\_COMPTES}, \code{SOA\_API\_CLES} & Hachages des comptes WS-Security et des clés d'API acceptés \\
+\code{SOA\_WS\_DELAI\_LECTURE\_MS}, \code{SOA\_REST\_DELAI\_LECTURE\_MS} & Délais d'attente des appels \\
+\code{BONITA\_URL}, \code{BONITA\_UTILISATEUR}, \code{BONITA\_MOTDEPASSE} & Accès à l'API de Bonita \\
+\bottomrule
+\end{tabularx}
+\caption{Principales variables de configuration}\label{tab:configuration}
+\end{table}
+
+\section{Opérations courantes}
+
+\begin{lstlisting}[language={}, caption={Scripts d'exploitation}]
+.\scripts\stop-all.ps1          # arrete les services et Docker (donnees conservees)
+.\scripts\reset-db.ps1          # remet les bases et Mailpit a l'etat initial
+.\scripts\verifier-socle.ps1    # 68 verifications : bases, droits, donnees de demonstration
+.\scripts\build.ps1             # compile et lance les tests unitaires
+.\rapport\compiler.ps1          # compile ce rapport (XeLaTeX)
+\end{lstlisting}
+
+Avant une démonstration, \code{reset-db.ps1} remet les données dans leur état initial : chaque scénario dispose alors de son étudiant (\code{docs/SCENARIOS\_DEMO.md}).
+
+\section{Dépannage}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.34\linewidth}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Symptôme} & \textbf{Cause probable et remède} \\ \midrule
+\code{start-all} signale Docker absent & Démarrer Docker Desktop, attendre qu'il soit prêt, relancer. \\
+Un service reste à 503 sur \code{/health} & Sa base ne répond pas : \code{docker ps}, puis \code{reset-db.ps1} si besoin ; voir \code{logs/<service>.log}. \\
+Dépôt de candidature en 503 en mode bonita & Bonita n'est pas démarré ou le processus n'est pas déployé ; ou démarrer en mode direct. \\
+Un rejet R1 inattendu pendant la démonstration & Les données ont été modifiées par un test : \code{reset-db.ps1}. \\
+Port déjà utilisé & Une ancienne instance tourne : \code{stop-all.ps1 -ServicesSeuls}. \\
+\bottomrule
+\end{tabularx}
+\caption{Problèmes fréquents}\label{tab:depannage}
+\end{table}

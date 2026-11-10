@@ -28,12 +28,12 @@ def noeud(id_, type_, nom, couloir, x, y, **extra):
 A, B = 250, 380  # rangées du couloir Système
 noeud("RECEPTION", "startEvent", "Candidature déposée", "COULOIR_ETUDIANT", 110, 90)
 noeud("VERIFICATION_ETUDIANT", "serviceTask", "Vérification de l'étudiant", "COULOIR_SYSTEME", 260, A)
-noeud("G_ETUDIANT", "exclusiveGateway", "Étudiant éligible ?", "COULOIR_SYSTEME", 410, A, defaut="F_ETUDIANT_NON")
+noeud("G_ETUDIANT", "exclusiveGateway", "Étudiant éligible ?", "COULOIR_SYSTEME", 410, A, defaut="F_ETUDIANT_NON", etiquette=(350, 196, 120))
 noeud("VERIFICATION_OFFRE", "serviceTask", "Vérification de l'offre", "COULOIR_SYSTEME", 540, A)
 noeud("G_OFFRE", "exclusiveGateway", "Offre existante et active ?", "COULOIR_SYSTEME", 690, A, defaut="F_OFFRE_NON")
 noeud("VERIFICATION_ENTREPRISE", "serviceTask", "Vérification de l'entreprise et du profil", "COULOIR_SYSTEME", 830, A)
 noeud("CONTROLE_CANDIDATURE", "serviceTask", "Contrôle de la candidature", "COULOIR_SYSTEME", 990, A)
-noeud("PASSERELLE_DECISION", "exclusiveGateway", "Conditions satisfaites ?", "COULOIR_SYSTEME", 1140, A, defaut="F_PASSERELLE_NON")
+noeud("PASSERELLE_DECISION", "exclusiveGateway", "Conditions satisfaites ?", "COULOIR_SYSTEME", 1140, A, defaut="F_PASSERELLE_NON", etiquette=(1030, 282, 100))
 noeud("ENREGISTREMENT", "serviceTask", "Enregistrement de la candidature", "COULOIR_SYSTEME", 1280, A)
 noeud("NOTIFICATION_DEPOT", "serviceTask", "Confirmation du dépôt", "COULOIR_SYSTEME", 1430, A)
 noeud("TRANSMISSION_ENTREPRISE", "serviceTask", "Transmission à l'entreprise", "COULOIR_SYSTEME", 1580, A)
@@ -42,7 +42,7 @@ noeud("NOTIFICATION_REJET", "serviceTask", "Notification du rejet", "COULOIR_SYS
 noeud("FIN_REJET", "endEvent", "Candidature rejetée", "COULOIR_SYSTEME", 1560, B)
 noeud("DECISION_ENTREPRISE", "userTask", "Décision de l'entreprise", "COULOIR_ENTREPRISE", 1740, 690)
 noeud("RELANCE_ENTREPRISE", "serviceTask", "Relance de l'entreprise", "COULOIR_ENTREPRISE", 1620, 790)
-noeud("G_DECISION", "exclusiveGateway", "Décision ?", "COULOIR_ENTREPRISE", 1890, 690)
+noeud("G_DECISION", "exclusiveGateway", "Décision ?", "COULOIR_ENTREPRISE", 1890, 690, etiquette=(1898, 712, 70))
 noeud("DEMANDE_COMPLEMENT", "serviceTask", "Demande de complément", "COULOIR_SYSTEME", 2030, 520)
 noeud("MISE_A_JOUR_PLACES", "serviceTask", "Réservation de la place", "COULOIR_SYSTEME", 2030, A)
 noeud("ENREGISTREMENT_ACCEPTATION", "serviceTask", "Enregistrement de l'acceptation", "COULOIR_SYSTEME", 2180, A)
@@ -62,39 +62,39 @@ SP_NOEUDS = {
     "ALERTE_RESPONSABLE": ("serviceTask", "Alerter le responsable", 570, 520),
     "FIN_ERREUR": ("endEvent", "Traitement interrompu", 720, 520),
 }
-MINUTEUR = dict(id="MINUTEUR_RELANCE", nom="7 jours sans décision", x=1760, y=720)
+MINUTEUR = dict(id="MINUTEUR_RELANCE", nom="7 jours sans décision", x=1760, y=720, etiquette=(1632, 726, 104))
 
 # Flux : id -> (source, cible, nom, condition, points)
 F = {}
 
 
-def flux(id_, source, cible, points, nom=None, condition=None):
-    F[id_] = dict(source=source, cible=cible, nom=nom, condition=condition, points=points)
+def flux(id_, source, cible, points, nom=None, condition=None, etiquette=None):
+    F[id_] = dict(source=source, cible=cible, nom=nom, condition=condition, points=points, etiquette=etiquette)
 
 
 C = "inpt.SoaProcessus."
 flux("F_RECEPTION", "RECEPTION", "VERIFICATION_ETUDIANT", [(128, 90), (260, 90), (260, 220)])
 flux("F_ETUDIANT", "VERIFICATION_ETUDIANT", "G_ETUDIANT", [(320, A), (385, A)])
-flux("F_ETUDIANT_OUI", "G_ETUDIANT", "VERIFICATION_OFFRE", [(435, A), (480, A)], "oui", "dossier.etudiantEligible == true")
-flux("F_ETUDIANT_NON", "G_ETUDIANT", "PASSERELLE_DECISION", [(410, 275), (410, 330), (1140, 330), (1140, 275)], "non")
+flux("F_ETUDIANT_OUI", "G_ETUDIANT", "VERIFICATION_OFFRE", [(435, A), (480, A)], "oui", "dossier.etudiantEligible == true", (440, 232, 30))
+flux("F_ETUDIANT_NON", "G_ETUDIANT", "PASSERELLE_DECISION", [(410, 275), (410, 330), (1140, 330), (1140, 275)], "non", etiquette=(416, 292, 30))
 flux("F_OFFRE", "VERIFICATION_OFFRE", "G_OFFRE", [(600, A), (665, A)])
-flux("F_OFFRE_OUI", "G_OFFRE", "VERIFICATION_ENTREPRISE", [(715, A), (770, A)], "oui", C + "offreValable(dossier)")
-flux("F_OFFRE_NON", "G_OFFRE", "PASSERELLE_DECISION", [(690, 225), (690, 196), (1140, 196), (1140, 225)], "non")
+flux("F_OFFRE_OUI", "G_OFFRE", "VERIFICATION_ENTREPRISE", [(715, A), (770, A)], "oui", C + "offreValable(dossier)", (722, 232, 30))
+flux("F_OFFRE_NON", "G_OFFRE", "PASSERELLE_DECISION", [(690, 225), (690, 196), (1140, 196), (1140, 225)], "non", etiquette=(698, 200, 30))
 flux("F_ENTREPRISE", "VERIFICATION_ENTREPRISE", "CONTROLE_CANDIDATURE", [(890, A), (930, A)])
 flux("F_CONTROLE", "CONTROLE_CANDIDATURE", "PASSERELLE_DECISION", [(1050, A), (1115, A)])
-flux("F_PASSERELLE_OUI", "PASSERELLE_DECISION", "ENREGISTREMENT", [(1165, A), (1220, A)], "oui", C + "conditionsSatisfaites(dossier)")
-flux("F_PASSERELLE_NON", "PASSERELLE_DECISION", "ENREGISTREMENT_REJET", [(1165, A), (1190, A), (1190, B), (1220, B)], "non")
+flux("F_PASSERELLE_OUI", "PASSERELLE_DECISION", "ENREGISTREMENT", [(1165, A), (1220, A)], "oui", C + "conditionsSatisfaites(dossier)", (1170, 232, 30))
+flux("F_PASSERELLE_NON", "PASSERELLE_DECISION", "ENREGISTREMENT_REJET", [(1165, A), (1190, A), (1190, B), (1220, B)], "non", etiquette=(1196, 300, 30))
 flux("F_ENREGISTREMENT", "ENREGISTREMENT", "NOTIFICATION_DEPOT", [(1340, A), (1370, A)])
 flux("F_DEPOT", "NOTIFICATION_DEPOT", "TRANSMISSION_ENTREPRISE", [(1490, A), (1520, A)])
 flux("F_TRANSMISSION", "TRANSMISSION_ENTREPRISE", "DECISION_ENTREPRISE", [(1640, A), (1740, A), (1740, 660)])
 flux("F_REJET", "ENREGISTREMENT_REJET", "NOTIFICATION_REJET", [(1340, B), (1370, B)])
 flux("F_NOTIF_REJET", "NOTIFICATION_REJET", "FIN_REJET", [(1490, B), (1542, B)])
 flux("F_DECISION", "DECISION_ENTREPRISE", "G_DECISION", [(1800, 690), (1865, 690)])
-flux("F_ACCEPTER", "G_DECISION", "MISE_A_JOUR_PLACES", [(1890, 665), (1890, A), (1970, A)], "ACCEPTER", C + "decisionEst(dossier, 'ACCEPTER')")
-flux("F_REFUSER", "G_DECISION", "ENREGISTREMENT_REFUS", [(1915, 690), (1940, 690), (1940, B), (1970, B)], "REFUSER", C + "decisionEst(dossier, 'REFUSER')")
+flux("F_ACCEPTER", "G_DECISION", "MISE_A_JOUR_PLACES", [(1890, 665), (1890, A), (1970, A)], "ACCEPTER", C + "decisionEst(dossier, 'ACCEPTER')", (1826, 560, 60))
+flux("F_REFUSER", "G_DECISION", "ENREGISTREMENT_REFUS", [(1915, 690), (1940, 690), (1940, B), (1970, B)], "REFUSER", C + "decisionEst(dossier, 'REFUSER')", (1946, 610, 60))
 flux("F_COMPLEMENT", "G_DECISION", "DEMANDE_COMPLEMENT", [(1890, 715), (1890, 745), (2030, 745), (2030, 550)], "DEMANDER_COMPLEMENT",
-     C + "decisionEst(dossier, 'DEMANDER_COMPLEMENT')")
-flux("F_RETOUR_DECISION", "DEMANDE_COMPLEMENT", "DECISION_ENTREPRISE", [(1970, 520), (1760, 520), (1760, 660)], "R11 : retour à la décision")
+     C + "decisionEst(dossier, 'DEMANDER_COMPLEMENT')", (1900, 750, 160))
+flux("F_RETOUR_DECISION", "DEMANDE_COMPLEMENT", "DECISION_ENTREPRISE", [(1970, 520), (1760, 520), (1760, 660)], "R11 : retour à la décision", etiquette=(1766, 494, 116))
 flux("F_MINUTEUR", "MINUTEUR_RELANCE", "RELANCE_ENTREPRISE", [(1760, 738), (1760, 760), (1680, 790)])
 flux("F_RELANCE", "RELANCE_ENTREPRISE", "DECISION_ENTREPRISE", [(1620, 760), (1620, 690), (1680, 690)])
 flux("F_PLACES", "MISE_A_JOUR_PLACES", "ENREGISTREMENT_ACCEPTATION", [(2090, A), (2120, A)])
@@ -221,17 +221,19 @@ def xml():
     for cid, _, y, h in COULOIRS:
         o.append(f'      <bpmndi:BPMNShape id="{cid}_di" bpmnElement="{cid}" isHorizontal="true"><dc:Bounds x="30" y="{y}" width="{LARGEUR - 30}" height="{h}"/></bpmndi:BPMNShape>\n')
 
-    def forme(i, type_, x, y, extra=""):
+    def forme(i, type_, x, y, extra="", position=None):
         w, h = taille(type_)
         etiquette = ""
         if "Task" not in type_:
-            etiquette = f'<bpmndi:BPMNLabel><dc:Bounds x="{x - 60}" y="{y + h // 2 + 4}" width="120" height="28"/></bpmndi:BPMNLabel>'
+            # Position explicite pour les passerelles dont un flux part vers le bas (libellé déplacé pour ne pas le couvrir).
+            ex, ey, ew = position or (x - 60, y + h // 2 + 4, 120)
+            etiquette = f'<bpmndi:BPMNLabel><dc:Bounds x="{ex}" y="{ey}" width="{ew}" height="28"/></bpmndi:BPMNLabel>'
         return (f'      <bpmndi:BPMNShape id="{i}_di" bpmnElement="{i}"{extra}><dc:Bounds x="{x - w // 2}" y="{y - h // 2}" width="{w}" height="{h}"/>'
                 f'{etiquette}</bpmndi:BPMNShape>\n')
 
     for i, n in N.items():
-        o.append(forme(i, n["type"], n["x"], n["y"], ' isMarkerVisible="true"' if "Gateway" in n["type"] else ""))
-    o.append(forme(MINUTEUR["id"], "boundaryEvent", MINUTEUR["x"], MINUTEUR["y"]))
+        o.append(forme(i, n["type"], n["x"], n["y"], ' isMarkerVisible="true"' if "Gateway" in n["type"] else "", n.get("etiquette")))
+    o.append(forme(MINUTEUR["id"], "boundaryEvent", MINUTEUR["x"], MINUTEUR["y"], position=MINUTEUR["etiquette"]))
     o.append(f'      <bpmndi:BPMNShape id="SP_ERREUR_di" bpmnElement="SP_ERREUR" isExpanded="true"><dc:Bounds x="{SP["x"]}" y="{SP["y"]}" width="{SP["w"]}" height="{SP["h"]}"/></bpmndi:BPMNShape>\n')
     for i, (type_, _, x, y) in SP_NOEUDS.items():
         o.append(forme(i, type_, x, y))
@@ -240,7 +242,8 @@ def xml():
         etiquette = ""
         if f.get("nom"):
             (x1, y1), (x2, y2) = f["points"][0], f["points"][1]
-            etiquette = f'<bpmndi:BPMNLabel><dc:Bounds x="{(x1 + x2) // 2 - 30}" y="{(y1 + y2) // 2 - 18}" width="60" height="14"/></bpmndi:BPMNLabel>'
+            ex, ey, ew = f.get("etiquette") or ((x1 + x2) // 2 - 30, (y1 + y2) // 2 - 18, 60)
+            etiquette = f'<bpmndi:BPMNLabel><dc:Bounds x="{ex}" y="{ey}" width="{ew}" height="14"/></bpmndi:BPMNLabel>'
         o.append(f'      <bpmndi:BPMNEdge id="{i}_di" bpmnElement="{i}">{points}{etiquette}</bpmndi:BPMNEdge>\n')
     o.append('    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n</bpmn:definitions>\n')
     return "".join(o)

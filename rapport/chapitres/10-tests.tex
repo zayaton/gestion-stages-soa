@@ -1,0 +1,104 @@
+\chapter{Scénarios de test et résultats}\label{chap:tests}
+
+\section{Stratégie}
+
+Les tests sont organisés en quatre niveaux, du plus rapide au plus complet. Chacun se lance par un script et produit un rapport ; les chiffres de ce chapitre sont lus dans ces rapports par \code{rapport/outils/resultats\_tests.py}, qui refuse de produire un tableau si une source manque ou contient un échec.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X l@{}}
+\toprule
+\textbf{Niveau} & \textbf{Ce qui est vérifié} & \textbf{Commande} \\ \midrule
+Unitaire et composant & Règles et services sans base (DAO en mémoire), échanges SOAP et REST sur serveur embarqué, conformité aux contrats. & \code{build.ps1} \\
+Intégration & DAO sur la vraie base MySQL : contraintes, index R5, verrou R6, retrait de place R10. & \code{build.ps1 clean verify} \\
+Service & Chaque opération SOAP (SoapUI) et REST (Postman), y compris sécurité, erreurs et vraies pannes. & \code{tests-soapui.ps1}, \code{tests-postman.ps1} \\
+Bout en bout & Tous les scénarios joués par le portail, courriels vérifiés dans Mailpit, panne de S3, interface dans un navigateur. & \code{test-bout-en-bout.ps1}, \code{captures-ui.ps1} \\
+\bottomrule
+\end{tabularx}
+\caption{Niveaux de test}\label{tab:niveaux-tests}
+\end{table}
+
+Les tests de service et de bout en bout modifient les données : ils sont joués sur une base fraîche (\code{reset-db.ps1}). Les données de démonstration fournissent un étudiant différent pour chaque scénario, pour que l'ordre des scénarios n'influe pas sur leur résultat.
+
+\section{Scénarios fonctionnels}
+
+Le tableau~\ref{tab:scenarios} présente les scénarios principaux, leur résultat attendu et le résultat obtenu lors de la dernière exécution du test de bout en bout (orchestration \modeBoutEnBout{}, processus simulé). La colonne « Obtenu » indique le nombre de vérifications du test qui couvrent le scénario ; toutes ont réussi.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.30\linewidth}>{\raggedright\arraybackslash}p{0.44\linewidth}>{\raggedright\arraybackslash}p{0.20\linewidth}@{}}
+\caption{Scénarios, résultats attendus et obtenus}\label{tab:scenarios}\\
+\toprule \textbf{Scénario} & \textbf{Attendu} & \textbf{Obtenu} \\ \midrule
+\endfirsthead
+\toprule \textbf{Scénario} & \textbf{Attendu} & \textbf{Obtenu} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\lignes{generes/tests-scenarios.tex}
+\end{longtable}
+
+Le même test passe à l'identique en mode direct, en mode bonita face au processus simulé avec connecteurs, et en mode bonita sans connecteur (mode secours) : \nbBoutEnBout{} vérifications à chaque fois, dont cinq pendant la panne de S3. Chaque scénario vérifie aussi le courriel reçu dans Mailpit (destinataire, sujet, motif du rejet).
+
+\section{Tests JUnit}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}X r r r@{}}
+\toprule
+\textbf{Module} & \textbf{Unitaires} & \textbf{Sur MySQL} & \textbf{Échecs} \\ \midrule
+\lignes{generes/tests-junit.tex}
+\bottomrule
+\end{tabularx}
+\caption{Résultats JUnit par module (\nbJunit{} tests)}\label{tab:junit}
+\end{table}
+
+Au-delà des règles de gestion, ces tests couvrent la validation des entrées, les transitions de statut, la sécurité (jetons WS-Security, clés d'API, sessions et rôles du portail), le masquage, le format des erreurs, la propagation de la corrélation et la conformité des routes REST aux contrats OpenAPI. Les tests du mode bonita utilisent un faux serveur Bonita qui répond à l'API REST, pour vérifier l'instanciation, l'exécution de la tâche de décision et la reprise de session.
+
+\section{Tests SoapUI}
+
+Le projet SoapUI (\code{tests/soapui/Stages-SOA-soapui-project.xml}) contient six suites. Les trois premières testent chaque opération des trois services : cas nominaux, conformité de la réponse au WSDL, fautes attendues, données invalides, sécurité (sans en-tête, compte inconnu, mauvais mot de passe). Les trois suivantes provoquent de vraies pannes : le script arrête S3, puis S1, puis la base MySQL, vérifie les fautes \code{ServiceIndisponibleFault} et les réponses dégradées, puis redémarre ce qu'il a arrêté.
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}X r r r@{}}
+\toprule
+\textbf{Suite} & \textbf{Cas de test} & \textbf{Assertions} & \textbf{Échecs} \\ \midrule
+\lignes{generes/tests-soapui.tex}
+\bottomrule
+\end{tabularx}
+\caption{Résultats SoapUI (\nbSoapUI{} assertions)}\label{tab:soapui}
+\end{table}
+
+% TODO capture : SoapUI, projet ouvert, suite « S1 Étudiants » exécutée (cas de test au vert).
+\capture{soapui-suite-s1.png}{60mm}{SoapUI : suite « S1 Étudiants » exécutée}{fig:soapui-suite}
+% TODO capture : SoapUI, requête verifierEtudiant avec l'en-tête WS-Security et la réponse.
+\capture{soapui-requete.png}{60mm}{SoapUI : requête \code{verifierEtudiant} avec en-tête WS-Security}{fig:soapui-requete}
+
+\section{Tests Postman et Newman}
+
+La collection Postman (\code{tests/postman/Stages-SOA.postman\_collection.json}, avec l'environnement \code{Stages-SOA-local}) compte dix dossiers joués dans l'ordre : sécurité des API, parcours nominal, un rejet par règle R1 à R7, R5 et R6 à l'enregistrement, R8 et R9, R10 (dernière place), R11, validation et erreurs de S4, notifications, suivi des stages. Elle est exécutée en ligne de commande par Newman, qui produit un rapport HTML.
+
+\begin{encadre}[Résultat de la dernière exécution]
+\nbPostmanRequetes{} requêtes, \nbPostman{} assertions, 0 échec.
+\end{encadre}
+
+% TODO capture : Postman, collection « Stages SOA - services REST » et résultat du Runner (toutes les assertions au vert).
+\capture{postman-runner.png}{60mm}{Postman : exécution de la collection}{fig:postman-runner}
+% TODO capture : rapport HTML de Newman (tests/postman/rapports/rapport-newman.html), page de synthèse.
+\capture{newman-rapport.png}{60mm}{Rapport HTML de Newman}{fig:newman}
+
+\section{Interface dans un navigateur}
+
+Le script \code{captures-ui.ps1} pilote Microsoft Edge avec Playwright : il joue une candidature jusqu'à son acceptation par l'interface, visite les vingt-huit écrans des trois espaces et échoue à la moindre erreur dans la console du navigateur, réponse 5xx ou fichier manquant. Les captures du chapitre suivant en sont issues. Ce test a révélé deux défauts corrigés avant la livraison : le message de déconnexion qui disparaissait, et un double affichage à la connexion.
+
+\section{Reproduire les résultats}
+
+\begin{lstlisting}[language={}, caption={Rejouer l'ensemble des tests (PowerShell, à la racine du projet)}]
+.\scripts\reset-db.ps1
+.\scripts\build.ps1 clean verify            # JUnit, dont tests sur MySQL
+.\scripts\start-all.ps1 -Orchestration direct
+.\scripts\verifier-socle.ps1                # socle et donnees de demonstration
+.\scripts\tests-soapui.ps1                  # SoapUI, pannes comprises
+.\scripts\tests-postman.ps1                 # Postman (Newman), base reinitialisee
+.\scripts\test-bout-en-bout.ps1             # scenarios par le portail, Mailpit, panne
+.\scripts\captures-ui.ps1                   # interface dans Edge
+python rapport\outils\resultats_tests.py    # reporte les chiffres dans le rapport
+\end{lstlisting}

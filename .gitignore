@@ -31,3 +31,13 @@ rapport/*.synctex.gz
 tests/postman/rapports/
 tests/e2e/rapports/
 tests/ui/captures.log*
+
+# Fichiers intermédiaires de LaTeX (le PDF est livré)
+rapport/*.aux
+rapport/*.log
+rapport/*.toc
+rapport/*.lof
+rapport/*.lot
+rapport/*.out
+rapport/*.synctex.gz
+rapport/outils/__pycache__/

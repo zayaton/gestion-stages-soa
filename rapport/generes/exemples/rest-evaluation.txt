@@ -1,0 +1,18 @@
+POST /api/v1/candidatures/13/evaluation
+X-Correlation-Id: dossier-20261110-005941
+X-API-Key: cle-postman-2026-Rb3WsE
+X-Acteur: entreprise:1
+
+--> HTTP 200
+{
+  "id": 13,
+  "soumissionId": 13,
+  "etudiantId": 1,
+  "offreId": 1,
+  "entrepriseId": 1,
+  "lettreMotivation": "Étudiante en AMOA, je souhaite contribuer au recueil des besoins de votre application de paiement mobile.",
+  "scoreCompetences": 100,
+  "statut": "EN_COURS_EVALUATION",
+  "creeLe": "2026-11-10T00:59:53",
+  "modifieLe": "2026-11-10T01:00:04"
+}

@@ -1,0 +1,41 @@
+\chapter{Limites, améliorations et conclusion}\label{chap:conclusion}
+
+\section{Limites connues}
+
+\begin{itemize}
+  \item \textbf{Pas de HTTPS en local.} Les mots de passe WS-Security et les clés d'API circulent en clair sur l'interface locale de la machine. C'est un choix assumé pour la démonstration ; la section~\ref{sec:tls} décrit la mise en production.
+  \item \textbf{Une seule instance par service}, sans répartition de charge. Les services sont sans état (hors base), ce qui permettrait de les dupliquer, mais rien n'est prévu pour les découvrir automatiquement.
+  \item \textbf{Cohérence entre services.} L'acceptation modifie trois services sans transaction distribuée. L'ordre des étapes, l'idempotence de la création du stage et la reprise par le responsable évitent toute incohérence durable, mais la reprise reste manuelle.
+  \item \textbf{Bonita.} La construction du processus dans le Studio se fait à la main, à partir du guide ; le compte technique qui exécute les décisions masque, dans Bonita, l'auteur réel de la décision (connu de S4). Supprimer un cas à l'annulation efface son historique dans Bonita (il reste dans S4).
+  \item \textbf{Interface.} Pas de version mobile travaillée ; pas de notification en direct (les écrans se mettent à jour à la navigation) ; le compte de connexion d'un étudiant créé par le responsable n'est pas créé automatiquement.
+  \item \textbf{Infrastructure.} Seules la base, Mailpit et Adminer sont conteneurisés ; les services Java se lancent par des scripts PowerShell, donc sous Windows.
+\end{itemize}
+
+\section{Améliorations possibles}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Amélioration} & \textbf{Apport} \\ \midrule
+API gateway & Point d'entrée unique devant les services REST (Kong, Spring Cloud Gateway…) : authentification, quotas, journalisation et TLS centralisés ; le portail ne s'occuperait plus que de l'interface. \\
+ESB & Médiation entre SOAP et REST, transformation des messages et routage (Apache Camel, WSO2) : les services n'auraient plus à connaître le protocole des autres. \\
+Registre de services & Découverte dynamique des adresses (Consul, Eureka) au lieu d'adresses fixes en configuration ; prérequis pour plusieurs instances. \\
+Conteneurisation complète & Une image Docker par service et un \code{docker compose up} unique, puis Kubernetes : démarrage identique sur toute machine, redémarrage automatique, mise à l'échelle. \\
+Messagerie asynchrone & Notifications publiées dans une file (RabbitMQ, Kafka) : un serveur de courriel lent ou arrêté ne ralentirait plus le traitement d'une candidature. \\
+Saga & Compensations automatiques pour l'acceptation (rendre la place si la création du stage échoue définitivement), au lieu de la reprise manuelle. \\
+Identité fédérée & OAuth~2 et OpenID Connect (Keycloak) pour les utilisateurs et les clients techniques, avec jetons signés à durée de vie courte. \\
+Observabilité & Traces distribuées (OpenTelemetry) prolongeant l'identifiant de corrélation, métriques et tableaux de bord. \\
+Intégration continue & Construction, tests et rapport à chaque modification du dépôt. \\
+\bottomrule
+\end{tabularx}
+\caption{Pistes d'amélioration}\label{tab:ameliorations}
+\end{table}
+
+\section{Conclusion}
+
+Ce projet met en œuvre, sur un cas métier concret, les principes d'une architecture orientée services : des services autonomes qui possèdent leurs données, exposent un contrat explicite (WSDL ou OpenAPI) et ne communiquent que par ces contrats ; un processus BPMN qui orchestre ces services pour traiter une candidature de bout en bout ; une sécurité adaptée à chaque type d'échange.
+
+Au-delà des fonctionnalités demandées, nous avons cherché à rendre le système vérifiable : chaque règle de gestion porte un identifiant suivi du code jusqu'aux courriels, chaque contrat est confronté au code par des tests, chaque panne est provoquée réellement pour en vérifier le traitement, et une candidature peut être suivie d'un service à l'autre grâce à un identifiant de corrélation. Les \nbJunit{} tests JUnit, les \nbSoapUI{} assertions SoapUI, les \nbPostman{} assertions Postman et le test de bout en bout ont tous réussi lors de la dernière exécution.
+
+Le projet nous a surtout appris que la difficulté d'une architecture orientée services n'est pas d'écrire chaque service, mais de traiter ce qui se passe entre eux : un service qui ne répond pas, deux demandes simultanées, une étape qui réussit à moitié. Les choix les plus utiles (une soumission distincte de la candidature, un journal d'étapes commun aux deux modes d'orchestration, des opérations idempotentes, un sous-processus d'erreur unique) sont nés de ces questions.

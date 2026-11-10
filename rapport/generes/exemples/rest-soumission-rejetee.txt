@@ -1,0 +1,30 @@
+POST /api/v1/soumissions
+X-Correlation-Id: rapport-0001
+X-API-Key: cle-postman-2026-Rb3WsE
+X-Acteur: etudiant:20
+
+{
+  "etudiantId": 20,
+  "offreId": 13,
+  "lettreMotivation": "Je souhaite rejoindre votre équipe décisionnelle pour ce stage de première année."
+}
+
+--> HTTP 202
+{
+  "id": 14,
+  "etudiantId": 20,
+  "offreId": 13,
+  "lettreMotivation": "Je souhaite rejoindre votre équipe décisionnelle pour ce stage de première année.",
+  "statut": "REJETEE",
+  "regleRejetee": "R3",
+  "motifRejet": "La date limite de candidature est dépassée (2026-11-05).",
+  "creeLe": "2026-11-10T00:59:55",
+  "etapes": [
+    {"etape": "RECEPTION", "resultat": "OK", "detail": "Candidature reçue", "date": "2026-11-10T00:59:55.711", "acteur": "etudiant:20"},
+    {"etape": "VERIFICATION_ETUDIANT", "resultat": "OK", "detail": "Étudiant actif (R1)", "date": "2026-11-10T00:59:55.943", "acteur": "processus"},
+    {"etape": "VERIFICATION_OFFRE", "resultat": "OK", "detail": "Offre active, entreprise active, profil compatible (R2, R7)", "date": "2026-11-10T00:59:56.541", "acteur": "processus"},
+    {"etape": "CONTROLE_CANDIDATURE", "resultat": "REJET", "detail": "R3 : La date limite de candidature est dépassée (2026-11-05).", "date": "2026-11-10T00:59:56.557", "acteur": "processus"},
+    {"etape": "PASSERELLE_DECISION", "resultat": "REJET", "detail": "R3 : La date limite de candidature est dépassée (2026-11-05).", "date": "2026-11-10T00:59:56.57", "acteur": "processus"},
+    {"etape": "NOTIFICATION_REJET", "resultat": "OK", "detail": "Courriel CANDIDATURE_REJETEE envoyé à aicha.tahiri@inpt.ac.ma", "date": "2026-11-10T00:59:56.621", "acteur": "processus"}
+  ]
+}

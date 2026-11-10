@@ -1,0 +1,31 @@
+POST /api/v1/soumissions
+X-Correlation-Id: dossier-20261110-005941
+X-API-Key: cle-postman-2026-Rb3WsE
+X-Acteur: etudiant:1
+
+{
+  "etudiantId": 1,
+  "offreId": 1,
+  "lettreMotivation": "Étudiante en AMOA, je souhaite contribuer au recueil des besoins de votre application de paiement mobile."
+}
+
+--> HTTP 202
+{
+  "id": 13,
+  "etudiantId": 1,
+  "offreId": 1,
+  "lettreMotivation": "Étudiante en AMOA, je souhaite contribuer au recueil des besoins de votre application de paiement mobile.",
+  "statut": "ENREGISTREE",
+  "candidatureId": 13,
+  "creeLe": "2026-11-10T00:59:52",
+  "etapes": [
+    {"etape": "RECEPTION", "resultat": "OK", "detail": "Candidature reçue", "date": "2026-11-10T00:59:52.167", "acteur": "etudiant:1"},
+    {"etape": "VERIFICATION_ETUDIANT", "resultat": "OK", "detail": "Étudiant actif (R1)", "date": "2026-11-10T00:59:52.389", "acteur": "processus"},
+    {"etape": "VERIFICATION_OFFRE", "resultat": "OK", "detail": "Offre active, entreprise active, profil compatible (R2, R7)", "date": "2026-11-10T00:59:53.053", "acteur": "processus"},
+    {"etape": "CONTROLE_CANDIDATURE", "resultat": "OK", "detail": "Date limite, places, doublon et limite de 5 respectés (R3 à R6)", "date": "2026-11-10T00:59:53.075", "acteur": "processus"},
+    {"etape": "PASSERELLE_DECISION", "resultat": "OK", "detail": "Conditions satisfaites", "date": "2026-11-10T00:59:53.079", "acteur": "processus"},
+    {"etape": "ENREGISTREMENT", "resultat": "OK", "detail": "Candidature 13 enregistrée", "date": "2026-11-10T00:59:53.111", "acteur": "processus"},
+    {"etape": "NOTIFICATION_DEPOT", "resultat": "OK", "detail": "Courriel CONFIRMATION_DEPOT envoyé à salma.elidrissi@inpt.ac.ma", "date": "2026-11-10T00:59:53.589", "acteur": "processus"},
+    {"etape": "TRANSMISSION_ENTREPRISE", "resultat": "OK", "detail": "Courriel NOUVELLE_CANDIDATURE_ENTREPRISE envoyé à contact@novapay-maghreb.ma", "date": "2026-11-10T00:59:53.635", "acteur": "processus"}
+  ]
+}

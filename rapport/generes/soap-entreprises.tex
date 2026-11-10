@@ -1,0 +1,17 @@
+% Généré par rapport/outils/generer_tables.py à partir de contracts/src/main/resources/wsdl/entreprises.wsdl. Ne pas modifier.
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.21\linewidth}>{\raggedright\arraybackslash\footnotesize}p{0.22\linewidth}@{}}
+\caption{Opérations SOAP de S2 Entreprises (port 8082, 7 opérations)}\label{tab:soap-entreprises}\\
+\toprule \textbf{Opération} & \textbf{Entrée} & \textbf{Sortie} & \textbf{Fautes métier} \\ \midrule
+\endfirsthead
+\toprule \textbf{Opération} & \textbf{Entrée} & \textbf{Sortie} & \textbf{Fautes métier} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textbf{\texttt{ajouterEntreprise}}\newline {\footnotesize Crée une entreprise.} & \texttt{entreprise} : Entreprise & \texttt{entrepriseCreee} : Entreprise & \texttt{DonneesInvalides} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{consulterEntreprise}}\newline {\footnotesize Renvoie une entreprise.} & \texttt{id} : long & \texttt{entreprise} : Entreprise & \texttt{EntrepriseIntrouvable} \\ \midrule
+\textbf{\texttt{listerEntreprises}}\newline {\footnotesize Liste les entreprises selon des critères facultatifs.} & \texttt{filtre} : FiltreEntreprises, facultatif & \texttt{entreprise} : Entreprise[], facultatif & \texttt{DonneesInvalides} \\ \midrule
+\textbf{\texttt{modifierEntreprise}}\newline {\footnotesize Remplace les informations, statut compris.} & \texttt{id} : long \newline \texttt{entreprise} : Entreprise & \texttt{entrepriseModifiee} : Entreprise & \texttt{EntrepriseIntrouvable} \newline \texttt{DonneesInvalides} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{supprimerEntreprise}}\newline {\footnotesize Supprime une entreprise sans offre. Interroge S3.} & \texttt{id} : long & – & \texttt{EntrepriseIntrouvable} \newline \texttt{Conflit} \newline \texttt{ServiceIndisponible} \\ \midrule
+\textbf{\texttt{verifierEntreprise}}\newline {\footnotesize Indique si l'entreprise est référencée et active (R2). Une entreprise inconnue donne referencee=false, pas une faute.} & \texttt{id} : long & \texttt{verification} : VerificationEntreprise & \texttt{ServiceIndisponible} \\ \midrule
+\textbf{\texttt{consulterOffresEntreprise}}\newline {\footnotesize Liste les offres de l'entreprise en appelant S3.} & \texttt{id} : long & \texttt{offre} : OffreResume[], facultatif & \texttt{EntrepriseIntrouvable} \newline \texttt{ServiceIndisponible} \\
+\end{longtable}

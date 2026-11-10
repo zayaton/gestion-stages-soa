@@ -1,0 +1,9 @@
+<!-- HTTP 500 -->
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+  <S:Body>
+    <S:Fault xmlns:ns4="http://www.w3.org/2003/05/soap-envelope">
+      <faultcode xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">wsse:InvalidSecurity</faultcode>
+      <faultstring>En-tête de sécurité WS-Security UsernameToken absent.</faultstring>
+    </S:Fault>
+  </S:Body>
+</S:Envelope>

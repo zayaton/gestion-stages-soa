@@ -1,0 +1,41 @@
+\chapter{Interface graphique}\label{chap:interface}
+
+\section{Principes}
+
+L'interface, proposée en bonus par l'énoncé, est servie par le portail (\url{http://localhost:8090}). Elle est écrite en HTML, CSS et JavaScript sans framework ni étape de construction : une page unique, des modules JavaScript par espace, un routage par l'adresse (\code{\#/espace/page/identifiant}). Toutes les données passent par l'API du portail, qui applique les rôles et le masquage ; le navigateur n'appelle jamais les services directement.
+
+La charte reste sobre et institutionnelle : le bleu de l'INPT comme seule couleur d'accent, un fond papier, des filets fins, Source Serif~4 pour les titres et Public Sans pour le texte, toutes deux servies par le portail (aucune ressource externe : l'interface fonctionne hors ligne). Les couleurs d'état sont réservées aux statuts et toujours accompagnées d'un libellé en français.
+
+Les captures de ce chapitre ont été produites automatiquement par le parcours Playwright décrit au chapitre précédent, sur les données de démonstration.
+
+\ecran{ui-connexion.png}{860}{860}{0.8}{Connexion, avec les comptes de démonstration}{fig:ui-connexion}
+
+\section{Espace étudiant}
+
+L'étudiant consulte les offres ouvertes (date limite non dépassée, au moins une place), filtrables par texte et par filière. Pour chaque offre, l'interface indique si son profil est compatible (règle R7) et le score indicatif de compétences. Il dépose sa candidature avec une lettre de motivation et obtient aussitôt le résultat du contrôle : enregistrée, ou non recevable avec la règle et le motif.
+
+\ecran{ui-etudiant-offres.png}{860}{1502}{0.8}{Offres de stage et compatibilité avec le profil}{fig:ui-offres}
+
+Le dossier d'une candidature réunit le diagramme du processus, coloré à partir du journal des étapes, la liste des étapes (son équivalent textuel), l'historique des statuts et la lettre. Tant que l'entreprise n'a pas ouvert l'évaluation, l'étudiant peut annuler (R8). Ses courriels sont consultables dans l'espace, tels qu'ils ont été envoyés.
+
+\ecran{ui-etudiant-candidature-acceptee.png}{1000}{2401}{0.8}{Dossier d'une candidature acceptée : processus BPMN en direct et historique}{fig:ui-dossier}
+
+\section{Espace entreprise}
+
+L'entreprise voit les candidatures reçues pour ses offres, avec le profil du candidat et ses coordonnées masquées. Elle ouvre l'évaluation, puis choisit d'accepter, de refuser ou de demander un complément ; un commentaire est obligatoire pour un complément, et toute décision définitive est confirmée dans une boîte de dialogue. Elle gère aussi ses offres (création, modification selon les transitions permises, clôture) et son profil.
+
+\ecran{ui-entreprise-candidature-deposee.png}{1200}{2295}{0.8}{Candidature reçue : profil masqué et ouverture de l'évaluation}{fig:ui-entreprise}
+
+\section{Espace responsable}
+
+Le responsable des stages dispose d'un tableau de bord : offres actives, candidatures et décisions en attente, taux d'acceptation, stages en cours, répartition par statut, état des six services et déclenchement manuel des rappels de date limite. Il consulte toutes les candidatures avec les coordonnées complètes, peut relancer le suivi d'une acceptation interrompue par une panne, gère les étudiants et les entreprises, suit les stages (statut, comptes rendus, évaluations) et recherche dans les courriels envoyés.
+
+\ecran{ui-responsable-tableau-de-bord.png}{1281}{1281}{0.8}{Tableau de bord du responsable des stages}{fig:ui-tableau}
+
+\ecran{ui-responsable-candidature-refusee.png}{900}{2220}{0.8}{Candidature refusée : branche du refus colorée sur le diagramme}{fig:ui-refus}
+
+\section{Vue BPMN en direct}
+
+Le diagramme affiché dans les dossiers est le fichier \code{processus-candidature.bpmn} du processus Bonita, dessiné par la bibliothèque bpmn-js. À l'ouverture d'un dossier, l'interface lit le journal des étapes de la candidature et ajoute un marqueur sur chaque nœud concerné : bleu pour une étape réalisée, rouge pour un rejet ou une erreur, ocre pour l'étape en attente (la décision de l'entreprise). Les flux entre deux étapes réalisées sont également colorés. La branche suivie après la décision (acceptation, refus ou complément) est déduite du détail de l'étape de décision.
+
+Comme les modes direct et bonita écrivent le même journal, la vue est la même quel que soit l'orchestrateur ; en mode bonita, elle suit le cas Bonita au fur et à mesure de son exécution.

@@ -1,0 +1,15 @@
+<!-- HTTP 500 -->
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+  <S:Body>
+    <S:Fault xmlns:ns4="http://www.w3.org/2003/05/soap-envelope">
+      <faultcode>S:Server</faultcode>
+      <faultstring>Aucun étudiant ne correspond à l'identifiant 9999.</faultstring>
+      <detail>
+        <etudiantIntrouvableFault xmlns="http://stages.inpt.ma/etudiants">
+          <code>ETUDIANT_INTROUVABLE</code>
+          <message>Aucun étudiant ne correspond à l'identifiant 9999.</message>
+        </etudiantIntrouvableFault>
+      </detail>
+    </S:Fault>
+  </S:Body>
+</S:Envelope>

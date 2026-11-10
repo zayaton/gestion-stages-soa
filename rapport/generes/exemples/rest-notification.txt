@@ -1,0 +1,16 @@
+GET /api/v1/notifications?destinataire=salma.elidrissi@inpt.ac.ma
+X-API-Key: cle-postman-2026-Rb3WsE
+
+--> HTTP 200 (premier élément ; corps HTML raccourci)
+{
+  "id": 4,
+  "type": "ACCEPTATION",
+  "destinataire": "salma.elidrissi@inpt.ac.ma",
+  "sujet": "Candidature retenue : Stage AMOA – Paiement mobile",
+  "corps": "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>Candidature retenue : Stage AMOA – Paiement mobile</t […]",
+  "dateEnvoi": "2026-11-10T01:00:10",
+  "statut": "ENVOYEE",
+  "candidatureId": 13,
+  "offreId": 1,
+  "correlationId": "dossier-20261110-005941"
+}

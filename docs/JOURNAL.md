@@ -215,3 +215,27 @@ Avec S3 arrêté, S4 répondait correctement 503 `SERVICE_OFFRES_INDISPONIBLE` (
 ### Limites connues
 - Pas de version mobile travaillée : l'interface reste utilisable jusqu'à une tablette, les tableaux défilent horizontalement en dessous.
 - L'étudiant ne reçoit pas de notification en direct : les écrans se mettent à jour à la navigation.
+
+## Phase 7 – Rapport LaTeX
+
+### Réalisé
+- **Rapport** `rapport/rapport.pdf` (65 pages, dont une dizaine de pages liminaires) : couverture, remerciements, résumé, introduction, besoins (acteurs, cas d'utilisation), architecture (schéma, matrice des interactions, diagramme de séquence, trace réelle de corrélation, modèle de données), SOAP, REST, règles R1 à R11, BPMN, sécurité et erreurs, tests, interface, déploiement, limites et conclusion.
+- **Compilation** : `rapport\compiler.ps1` (XeLaTeX, deux passes ; `-Regenerer` relance les générateurs). Polices de l'interface (Source Serif 4, Public Sans) converties en TTF dans `rapport/polices/` ; diagrammes en TikZ.
+- **Rien n'est écrit à la main quand une source existe** (`rapport/outils/`) :
+  - `generer_tables.py` : tableaux des 22 opérations SOAP et 38 opérations REST, lus dans les WSDL et OpenAPI ;
+  - `capturer_exemples.py` : vrais échanges SOAP et REST et trace de corrélation d'une candidature dans six services (pile en mode direct) ; s'arrête si une réponse n'est pas celle que décrit le rapport ;
+  - `resultats_tests.py` : chiffres des rapports JUnit, SoapUI, Newman et bout en bout ; refuse d'écrire si un test a échoué ;
+  - `exporter_bpmn.mjs` : diagramme BPMN en PNG par bpmn-js (Edge), échoue sur tout avertissement d'import.
+- **Captures à faire** : 12 emplacements visibles dans le PDF (« CAPTURE À FAIRE ») et commentés `% TODO capture :`, listés avec la marche à suivre dans `docs/CAPTURES_A_FAIRE.md`. Un fichier déposé dans `rapport/figures/` au bon nom remplace l'emplacement à la compilation suivante.
+
+### Décisions
+- **Longueur** : 55 pages de corps environ au lieu de 40 ; les tableaux d'opérations, les exemples réels et les captures demandés ne tiennent pas en moins sans perdre de contenu. Les échanges secondaires sont dans `rapport/generes/exemples/`.
+- **Diagramme BPMN** : libellés des passerelles et des flux repositionnés (`generer_bpmn.py`, mise en page seulement, modèle inchangé) ; copie mise à jour dans `bpmn/`, captures de l'interface régénérées.
+- **Paquets LaTeX** : le serveur de paquets de MiKTeX est injoignable depuis la session (contrôle de révocation des certificats), malgré l'installation automatique activée. Le rapport n'utilise que les paquets présents (pas de `caption`, `enumitem`, ni bibliothèques `skins`/`breakable` de tcolorbox). Il compile aussi sur Overleaf (compilateur XeLaTeX).
+
+### Incidents
+- L'outil Bash de la session réduit `\\` à `\` dans les documents en ligne : deux fichiers ont reçu des caractères de contrôle à la place de `\b` ou `\l`. Repérés, corrigés ; les modifications de fichiers passent depuis par des scripts écrits sur disque.
+
+### Reste à faire par vous
+- Remplacer « Pr. [NOM À COMPLÉTER] » (couverture, remerciements) : `rapport/chapitres/00-couverture.tex` et `01-preliminaires.tex`.
+- Les 12 captures de `docs/CAPTURES_A_FAIRE.md`, puis `.\rapport\compiler.ps1`.

@@ -1,0 +1,33 @@
+% Rapport technique du projet SOA : gestion intelligente des stages et des offres de recrutement.
+% Compilation : .\compiler.ps1 (XeLaTeX, deux passes) ou, sur Overleaf, compilateur XeLaTeX.
+% Les fichiers de generes/ sont produits par les scripts de outils/ à partir des contrats et des rapports de test.
+\documentclass[11pt, a4paper, openany]{report}
+\input{preambule}
+\input{generes/tests-chiffres}
+
+\begin{document}
+
+\pagenumbering{roman}
+\input{chapitres/00-couverture}
+\input{chapitres/01-preliminaires}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\cleardoublepage
+\pagenumbering{arabic}
+\input{chapitres/02-introduction}
+\input{chapitres/03-besoins}
+\input{chapitres/04-architecture}
+\input{chapitres/05-soap}
+\input{chapitres/06-rest}
+\input{chapitres/07-regles}
+\input{chapitres/08-bpmn}
+\input{chapitres/09-securite}
+\input{chapitres/10-tests}
+\input{chapitres/11-interface}
+\input{chapitres/12-deploiement}
+\input{chapitres/13-conclusion}
+
+\end{document}

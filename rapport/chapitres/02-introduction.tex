@@ -1,0 +1,52 @@
+\chapter{Introduction et contexte}\label{chap:introduction}
+
+\section{Contexte}
+
+Les établissements d'enseignement supérieur gèrent chaque année des centaines d'offres de stage et des milliers de candidatures. À l'INPT, comme dans beaucoup d'écoles, ces échanges passent encore largement par des courriels et des tableurs : l'entreprise publie une offre, les étudiants envoient leur dossier, le service des stages vérifie à la main l'éligibilité de chacun, relance les entreprises et reporte les décisions. Les informations sont dispersées, les règles appliquées de façon inégale et le suivi d'un dossier repose sur la mémoire des personnes.
+
+Le sujet du projet propose de remplacer ce fonctionnement par une plateforme fondée sur une \textbf{architecture orientée services} (SOA). Chaque domaine du métier (étudiants, entreprises, offres, candidatures, notifications, suivi des stages) devient un service autonome, qui expose un contrat et garde ses propres données. Un \textbf{processus BPMN} orchestre ces services pour traiter une candidature de bout en bout, du dépôt jusqu'à la décision finale.
+
+\section{Objectifs}
+
+Le cahier des charges fixe les livrables suivants :
+\begin{itemize}
+  \item trois services \textbf{SOAP} décrits par WSDL : gestion des étudiants (S1), des entreprises (S2) et des offres de stage (S3) ;
+  \item trois services \textbf{REST} : gestion des candidatures (S4), notifications (S5) et suivi des stages (S6) ;
+  \item un \textbf{processus BPMN} modélisé et exécuté dans Bonita Studio, qui orchestre les appels SOAP et REST, gère les décisions, les erreurs et les notifications ;
+  \item un \textbf{rapport technique} et une \textbf{vidéo de démonstration} ;
+  \item en bonus, une \textbf{interface graphique} pour les étudiants, les entreprises et le responsable des stages.
+\end{itemize}
+
+Nous avons ajouté trois exigences de qualité, qui guident les choix décrits dans la suite : chaque service doit pouvoir être testé seul, chaque règle de gestion doit être vérifiée par un test automatique, et aucune panne d'un service ne doit laisser une candidature dans un état incohérent.
+
+\section{Choix techniques}
+
+Nous avons suivi les technologies recommandées par l'énoncé :
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Domaine} & \textbf{Choix} \\ \midrule
+Langage & Java 17, projet Maven multi-module (un module par service, plus un socle commun) \\
+SOAP & JAX-WS (Eclipse Metro 4), WSDL écrits d'abord (\emph{contract first}), clients générés par \code{wsimport} \\
+REST & JAX-RS (Eclipse Jersey 3.1) sur un serveur Grizzly, contrats OpenAPI 3 écrits à la main \\
+Persistance & MySQL 8.4 dans Docker, un schéma et un compte par service, JDBC avec le pool HikariCP \\
+Orchestration & Bonita Studio Community 2025.2 ; mode de secours « direct » exécuté en Java \\
+Courriels & SMTP vers Mailpit, serveur de courriel de test (aucun envoi réel) \\
+Tests & JUnit 5.11, SoapUI 5.10, Postman et Newman, test de bout en bout en Node.js, Playwright pour l'interface \\
+Interface & HTML, CSS et JavaScript sans framework ; bpmn-js pour l'affichage du processus \\
+\bottomrule
+\end{tabularx}
+\caption{Technologies retenues}\label{tab:technologies}
+\end{table}
+
+Chaque service est un programme indépendant, lancé dans son propre processus Java et à l'écoute sur son propre port. Aucun service ne lit la base d'un autre : toute information extérieure passe par un appel de service. C'est ce qui rend l'architecture réellement orientée services, et non un monolithe découpé en paquets.
+
+\section{Organisation du rapport}
+
+Le chapitre~\ref{chap:besoins} analyse les besoins et les acteurs. Le chapitre~\ref{chap:architecture} décrit l'architecture et les interactions entre services, avec le parcours complet d'une candidature. Les chapitres~\ref{chap:soap} et~\ref{chap:rest} documentent les opérations SOAP et les API REST. Le chapitre~\ref{chap:regles} détaille les règles de gestion R1 à R11, et le chapitre~\ref{chap:bpmn} le processus BPMN. Le chapitre~\ref{chap:securite} traite de la sécurité et de la gestion des erreurs, le chapitre~\ref{chap:tests} des scénarios et des résultats de test. Les chapitres~\ref{chap:interface} et~\ref{chap:deploiement} présentent l'interface et le déploiement. Le dernier chapitre discute les limites et les améliorations possibles.
+
+\begin{encadre}[Données de démonstration]
+Toutes les personnes, entreprises, adresses et numéros cités dans ce rapport sont fictifs. Les courriels ne quittent jamais la machine : ils sont reçus par Mailpit.
+\end{encadre}

@@ -1,0 +1,25 @@
+% Remerciements et résumé
+\chapter*{Remerciements}
+\addcontentsline{toc}{chapter}{Remerciements}
+\markboth{Remerciements}{}
+
+Nous remercions Pr.~[NOM À COMPLÉTER], qui a encadré ce projet dans le cadre du module SOA, pour un sujet qui nous a fait traverser toute la chaîne d'une architecture orientée services : contrats, sécurité des échanges, orchestration et tests.
+
+Nos remerciements vont aussi à l'équipe pédagogique de la filière AMOA de l'INPT, dont les enseignements de modélisation des processus et d'analyse des besoins ont directement servi à la conception du processus de candidature.
+
+Enfin, merci aux communautés qui maintiennent les outils libres utilisés ici : Eclipse Metro (JAX-WS), Eclipse Jersey (JAX-RS), MySQL, Mailpit, Bonita Community, SoapUI Open Source, Newman et bpmn-js.
+
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+\markboth{Résumé}{}
+
+Ce rapport présente une plateforme de gestion des stages réalisée selon une architecture orientée services. Six services indépendants, chacun avec sa propre base de données, couvrent les étudiants, les entreprises partenaires et les offres de stage (services SOAP décrits par des contrats WSDL), ainsi que les candidatures, les notifications et le suivi des stages (services REST décrits par des contrats OpenAPI).
+
+Le traitement d'une candidature, du dépôt à la décision de l'entreprise puis à la création du dossier de stage, est modélisé par un processus BPMN exécuté dans Bonita, qui appelle les six services. Onze règles de gestion, numérotées de R1 à R11, encadrent ce traitement : éligibilité de l'étudiant, validité de l'offre, date limite, places, doublons, nombre de candidatures actives, compatibilité du profil, annulation, transitions de statut, acceptation et demande de complément.
+
+Les échanges SOAP sont authentifiés par WS-Security, les appels REST par une clé d'API par client, et les utilisateurs par un portail avec trois rôles. Les pannes de service sont traitées par le processus comme par le portail, et un identifiant de corrélation permet de suivre une candidature dans les journaux de tous les services.
+
+Le projet est vérifié par \nbJunit{} tests JUnit (dont \nbJunitIT{} sur la vraie base de données), \nbSoapUI{} assertions SoapUI, \nbPostman{} assertions Postman et un test de bout en bout qui rejoue chaque scénario par le portail et contrôle les courriels reçus. Une interface web, proposée en bonus, permet aux étudiants de candidater, aux entreprises de décider et au responsable de suivre les stages, avec l'avancement de chaque candidature affiché sur le diagramme BPMN.
+
+\bigskip
+\textbf{Mots-clés :} architecture orientée services, SOAP, WSDL, JAX-WS, REST, JAX-RS, OpenAPI, BPMN, Bonita, orchestration, WS-Security, MySQL.

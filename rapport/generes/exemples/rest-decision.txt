@@ -1,0 +1,21 @@
+POST /api/v1/candidatures/13/decision
+X-Correlation-Id: dossier-20261110-005941
+X-API-Key: cle-postman-2026-Rb3WsE
+X-Acteur: entreprise:1
+
+{
+  "decision": "ACCEPTER",
+  "commentaire": "Profil en adéquation avec la mission."
+}
+
+--> HTTP 200
+{
+  "candidature": {"id": 13, "soumissionId": 13, "etudiantId": 1, "offreId": 1, "entrepriseId": 1, "lettreMotivation": "Étudiante en AMOA, je souhaite contribuer au recueil des besoins de votre application de paiement mobile.", "scoreCompetences": 100, "statut": "ACCEPTEE", "creeLe": "2026-11-10T00:59:53", "modifieLe": "2026-11-10T01:00:09"},
+  "etapes": [
+    {"etape": "DECISION_ENTREPRISE", "resultat": "OK", "detail": "Acceptée : Profil en adéquation avec la mission.", "date": "2026-11-10T01:00:09.7257395", "acteur": "entreprise:1"},
+    {"etape": "MISE_A_JOUR_PLACES", "resultat": "OK", "detail": "Place retirée de l'offre (R10)", "date": "2026-11-10T01:00:09.7301431", "acteur": "processus"},
+    {"etape": "NOTIFICATION_RESULTAT", "resultat": "OK", "detail": "Courriel ACCEPTATION envoyé à salma.elidrissi@inpt.ac.ma", "date": "2026-11-10T01:00:09.8171537", "acteur": "processus"},
+    {"etape": "CREATION_STAGE", "resultat": "OK", "detail": "Dossier de stage créé du 2026-12-10 au 2027-03-04 (R10)", "date": "2026-11-10T01:00:09.8686908", "acteur": "processus"},
+    {"etape": "MISE_A_JOUR_ETUDIANT", "resultat": "OK", "detail": "Étudiant passé EN_STAGE (R10)", "date": "2026-11-10T01:00:09.9796312", "acteur": "processus"}
+  ]
+}

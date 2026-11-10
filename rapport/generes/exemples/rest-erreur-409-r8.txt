@@ -1,0 +1,13 @@
+DELETE /api/v1/candidatures/13
+X-Correlation-Id: rapport-0001
+X-API-Key: cle-postman-2026-Rb3WsE
+X-Acteur: etudiant:1
+
+--> HTTP 409
+{
+  "code": "ANNULATION_IMPOSSIBLE",
+  "message": "Règle R8 : une candidature ne peut être annulée que tant qu'elle est déposée (statut actuel : EN_COURS_EVALUATION).",
+  "details": [],
+  "timestamp": "2026-11-10T01:00:06Z",
+  "path": "/api/v1/candidatures/13"
+}

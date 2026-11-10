@@ -1,0 +1,11 @@
+GET /api/v1/candidatures
+X-Correlation-Id: rapport-0001
+
+--> HTTP 401
+{
+  "code": "NON_AUTHENTIFIE",
+  "message": "En-tête X-API-Key absent.",
+  "details": ["Chaque appel doit porter l'en-tête X-API-Key avec la clé du client."],
+  "timestamp": "2026-11-10T01:00:02Z",
+  "path": "/api/v1/candidatures"
+}

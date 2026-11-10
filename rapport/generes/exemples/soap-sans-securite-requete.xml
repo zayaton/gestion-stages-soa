@@ -1,0 +1,10 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:etu="http://stages.inpt.ma/etudiants">
+  <soapenv:Header>
+    <cor:CorrelationId xmlns:cor="http://stages.inpt.ma/commun">rapport-0001</cor:CorrelationId>
+  </soapenv:Header>
+  <soapenv:Body>
+    <etu:consulterEtudiant>
+      <etu:id>1</etu:id>
+    </etu:consulterEtudiant>
+  </soapenv:Body>
+</soapenv:Envelope>

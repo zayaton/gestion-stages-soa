@@ -1,0 +1,17 @@
+GET /api/v1/candidatures/13
+X-Correlation-Id: rapport-0001
+X-API-Key: cle-postman-2026-Rb3WsE
+
+--> HTTP 200
+{
+  "id": 13,
+  "soumissionId": 13,
+  "etudiantId": 1,
+  "offreId": 1,
+  "entrepriseId": 1,
+  "lettreMotivation": "Étudiante en AMOA, je souhaite contribuer au recueil des besoins de votre application de paiement mobile.",
+  "scoreCompetences": 100,
+  "statut": "DEPOSEE",
+  "creeLe": "2026-11-10T00:59:53",
+  "modifieLe": "2026-11-10T00:59:53"
+}

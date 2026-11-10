@@ -1,0 +1,21 @@
+% Généré par rapport/outils/generer_tables.py à partir de rest-suivi/src/main/resources/openapi.yaml. Ne pas modifier.
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.06\linewidth}>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.14\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}@{}}
+\caption{Points d'accès REST de S6 Suivi des stages (base \texttt{/api/v1}, 11 opérations)}\label{tab:rest-suivi}\\
+\toprule \textbf{Verbe} & \textbf{URI et rôle} & \textbf{Paramètres} & \textbf{Corps} & \textbf{Codes} \\ \midrule
+\endfirsthead
+\toprule \textbf{Verbe} & \textbf{URI et rôle} & \textbf{Paramètres} & \textbf{Corps} & \textbf{Codes} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textsc{post} & \texttt{/\allowbreak{}stages}\newline{\footnotesize Créer le dossier de stage d'une candidature acceptée (règle R10)} & – & \texttt{NouveauStage} & 200, 201, 400, 401, 409, 422, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}stages}\newline{\footnotesize Lister les stages} & \texttt{statut?}, \texttt{etudiantId?}, \texttt{entrepriseId?} & – & 200, 400, 401, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}}\newline{\footnotesize Consulter un stage (statut et dates)} & \texttt{id} & – & 200, 401, 404, 422 \\ \midrule
+\textsc{patch} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}/\allowbreak{}statut}\newline{\footnotesize Changer le statut d'un stage} & \texttt{id} & \texttt{ChangementStatut} & 200, 400, 401, 404, 409, 422 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}/\allowbreak{}comptes-rendus}\newline{\footnotesize Enregistrer un compte rendu périodique} & \texttt{id} & \texttt{NouveauCompteRendu} & 201, 400, 401, 404, 409, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}/\allowbreak{}comptes-rendus}\newline{\footnotesize Lister les comptes rendus d'un stage} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}/\allowbreak{}evaluations}\newline{\footnotesize Enregistrer une évaluation (note sur 20 et commentaires)} & \texttt{id} & \texttt{NouvelleEvaluation} & 201, 400, 401, 404, 409, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}/\allowbreak{}evaluations}\newline{\footnotesize Lister les évaluations d'un stage} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}stages/\allowbreak{}\{id\}/\allowbreak{}historique}\newline{\footnotesize Historique des opérations d'un stage} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}etudiants/\allowbreak{}\{id\}/\allowbreak{}stages}\newline{\footnotesize Historique des stages d'un étudiant} & \texttt{id} & – & 200, 401, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}stage}\newline{\footnotesize Stage créé pour une candidature} & \texttt{id} & – & 200, 401, 404 \\
+\end{longtable}

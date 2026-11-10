@@ -1,0 +1,33 @@
+% Généré par rapport/outils/generer_tables.py à partir de rest-candidatures/src/main/resources/openapi.yaml. Ne pas modifier.
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.06\linewidth}>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.14\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}@{}}
+\caption{Points d'accès REST de S4 Candidatures (base \texttt{/api/v1}, 23 opérations)}\label{tab:rest-candidatures}\\
+\toprule \textbf{Verbe} & \textbf{URI et rôle} & \textbf{Paramètres} & \textbf{Corps} & \textbf{Codes} \\ \midrule
+\endfirsthead
+\toprule \textbf{Verbe} & \textbf{URI et rôle} & \textbf{Paramètres} & \textbf{Corps} & \textbf{Codes} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textsc{post} & \texttt{/\allowbreak{}soumissions}\newline{\footnotesize Déposer une candidature (déclenche le processus)} & – & \texttt{NouvelleSoumission} & 202, 400, 401, 403, 422, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}soumissions/\allowbreak{}\{id\}}\newline{\footnotesize Consulter une soumission et ses étapes} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}soumissions/\allowbreak{}\{id\}/\allowbreak{}etapes}\newline{\footnotesize Étapes du processus déjà exécutées (vue BPMN en direct)} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}soumissions/\allowbreak{}\{id\}/\allowbreak{}etapes}\newline{\footnotesize Signaler une étape exécutée par le processus Bonita} & \texttt{id} & \texttt{NouvelleEtape} & 201, 400, 401, 403, 404, 422 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}soumissions/\allowbreak{}\{id\}/\allowbreak{}rejet}\newline{\footnotesize Enregistrer le rejet décidé par le processus Bonita (R1 à R7)} & \texttt{id} & \texttt{Rejet} & 200, 400, 401, 403, 404, 409, 422 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}soumissions/\allowbreak{}\{id\}/\allowbreak{}erreur}\newline{\footnotesize Signaler l'interruption du processus Bonita (service indisponible)} & \texttt{id} & \texttt{JSON} & 200, 400, 401, 403, 404, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}processus/\allowbreak{}mode}\newline{\footnotesize Mode d'orchestration en service (bonita ou direct)} & – & – & 200, 401 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}etudiants/\allowbreak{}\{id\}/\allowbreak{}soumissions}\newline{\footnotesize Soumissions d'un étudiant, y compris rejetées} & \texttt{id} & – & 200, 401, 422 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}candidatures}\newline{\footnotesize Enregistrer une candidature (appelé par le processus après la passerelle de décision)} & – & \texttt{NouvelleCandidature} & 201, 400, 401, 403, 404, 409, 422, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}candidatures}\newline{\footnotesize Lister les candidatures (filtres combinables)} & \texttt{statut?}, \texttt{etudiantId?}, \texttt{offreId?}, \texttt{entrepriseId?} & – & 200, 400, 401 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}candidatures/\allowbreak{}verification-doublon}\newline{\footnotesize Règle R5 - candidature non annulée existante pour ce couple étudiant et offre} & \texttt{etudiantId}, \texttt{offreId} & – & 200, 400, 401 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}}\newline{\footnotesize Consulter une candidature} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{delete} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}}\newline{\footnotesize Annuler une candidature (règle R8)} & \texttt{id} & – & 204, 401, 404, 409 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}historique}\newline{\footnotesize Historique des changements de statut (date, acteur, commentaire)} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}etapes}\newline{\footnotesize Étapes du processus de la candidature (vue BPMN en direct)} & \texttt{id} & – & 200, 401, 404 \\ \midrule
+\textsc{patch} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}statut}\newline{\footnotesize Changer le statut (règle R9)} & \texttt{id} & \texttt{ChangementStatut} & 200, 400, 401, 403, 404, 409, 422 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}evaluation}\newline{\footnotesize Démarrer l'évaluation (l'entreprise ouvre le dossier)} & \texttt{id} & – & 200, 401, 403, 404, 409 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}decision}\newline{\footnotesize Décision de l'entreprise (étapes 7 à 9)} & \texttt{id} & \texttt{Decision} & 200, 400, 401, 403, 404, 409, 422, 503 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}candidatures/\allowbreak{}\{id\}/\allowbreak{}suivi/\allowbreak{}reprendre}\newline{\footnotesize Rejouer les étapes de suivi d'une candidature acceptée (stage, statut de l'étudiant)} & \texttt{id} & – & 200, 401, 403, 404, 409, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}etudiants/\allowbreak{}\{id\}/\allowbreak{}candidatures}\newline{\footnotesize Candidatures d'un étudiant} & \texttt{id} & – & 200, 401, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}etudiants/\allowbreak{}\{id\}/\allowbreak{}candidatures/\allowbreak{}actives/\allowbreak{}compte}\newline{\footnotesize Règle R6 - nombre de candidatures actives de l'étudiant} & \texttt{id} & – & 200, 401, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}offres/\allowbreak{}\{id\}/\allowbreak{}candidatures}\newline{\footnotesize Candidatures reçues pour une offre} & \texttt{id} & – & 200, 401, 422 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}entreprises/\allowbreak{}\{id\}/\allowbreak{}candidatures}\newline{\footnotesize Candidatures reçues par une entreprise} & \texttt{id}, \texttt{statut?} & – & 200, 400, 401, 422 \\
+\end{longtable}

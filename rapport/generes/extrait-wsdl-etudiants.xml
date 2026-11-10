@@ -1,0 +1,35 @@
+<!-- Type de la réponse (extrait de wsdl:types) -->
+<xs:complexType name="VerificationEtudiant">
+  <xs:sequence>
+    <xs:element name="existe" type="xs:boolean"/>
+    <xs:element name="statut" minOccurs="0">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="ACTIF"/>
+          <xs:enumeration value="SUSPENDU"/>
+          <xs:enumeration value="EN_STAGE"/>
+          <xs:enumeration value="DIPLOME"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:element>
+    <xs:element name="eligible" type="xs:boolean"/>
+    <xs:element name="regle" type="xs:string" minOccurs="0"/>
+    <xs:element name="motif" type="xs:string" minOccurs="0"/>
+    <xs:element name="nomComplet" type="xs:string" minOccurs="0"/>
+    <xs:element name="email" type="xs:string" minOccurs="0"/>
+    <xs:element name="filiere" type="xs:string" minOccurs="0"/>
+    <xs:element name="niveau" type="xs:string" minOccurs="0"/>
+  </xs:sequence>
+</xs:complexType>
+
+<!-- Opération dans le portType -->
+<wsdl:operation name="verifierEtudiant">
+  <wsdl:documentation>Indique si l'étudiant existe, son statut et s'il peut candidater (R1). Un étudiant inconnu donne existe=false, pas une faute. Fautes attendues : ServiceIndisponibleFault.</wsdl:documentation>
+  <wsdl:input message="tns:verifierEtudiantRequete"/>
+  <wsdl:output message="tns:verifierEtudiantReponse"/>
+  <wsdl:fault name="EtudiantIntrouvableFault" message="tns:EtudiantIntrouvableFault"/>
+  <wsdl:fault name="DonneesInvalidesFault" message="tns:DonneesInvalidesFault"/>
+  <wsdl:fault name="ConflitFault" message="tns:ConflitFault"/>
+  <wsdl:fault name="ServiceIndisponibleFault" message="tns:ServiceIndisponibleFault"/>
+  <wsdl:fault name="ErreurInterneFault" message="tns:ErreurInterneFault"/>
+</wsdl:operation>

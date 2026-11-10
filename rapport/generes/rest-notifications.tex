@@ -1,0 +1,14 @@
+% Généré par rapport/outils/generer_tables.py à partir de rest-notifications/src/main/resources/openapi.yaml. Ne pas modifier.
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.06\linewidth}>{\raggedright\arraybackslash}p{0.40\linewidth}>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.14\linewidth}>{\raggedright\arraybackslash}p{0.12\linewidth}@{}}
+\caption{Points d'accès REST de S5 Notifications (base \texttt{/api/v1}, 4 opérations)}\label{tab:rest-notifications}\\
+\toprule \textbf{Verbe} & \textbf{URI et rôle} & \textbf{Paramètres} & \textbf{Corps} & \textbf{Codes} \\ \midrule
+\endfirsthead
+\toprule \textbf{Verbe} & \textbf{URI et rôle} & \textbf{Paramètres} & \textbf{Corps} & \textbf{Codes} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textsc{post} & \texttt{/\allowbreak{}notifications}\newline{\footnotesize Envoyer une notification} & – & \texttt{NouvelleNotification} & 201, 400, 401, 403, 422, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}notifications}\newline{\footnotesize Lister les notifications} & \texttt{destinataire?}, \texttt{candidatureId?}, \texttt{type?}, \texttt{limite?} & – & 200, 400, 401, 503 \\ \midrule
+\textsc{get} & \texttt{/\allowbreak{}notifications/\allowbreak{}\{id\}}\newline{\footnotesize Consulter une notification, avec le corps HTML envoyé} & \texttt{id} & – & 200, 401, 404, 422 \\ \midrule
+\textsc{post} & \texttt{/\allowbreak{}rappels/\allowbreak{}executer}\newline{\footnotesize Exécuter maintenant les rappels de date limite} & \texttt{jours?} & – & 200, 400, 401, 403, 503 \\
+\end{longtable}

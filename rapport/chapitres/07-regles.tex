@@ -1,0 +1,65 @@
+\chapter{Règles de gestion}\label{chap:regles}
+
+Onze règles encadrent le traitement d'une candidature. Chacune porte un identifiant, repris partout : dans le code, les messages d'erreur, le journal des étapes, les courriels de rejet, les tests et l'interface. Un étudiant dont la candidature est refusée voit ainsi la règle exacte et un motif en français, par exemple « R3 : La date limite de candidature est dépassée (2026-11-04) ».
+
+\section{Vue d'ensemble}
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.07\linewidth}>{\raggedright\arraybackslash}p{0.33\linewidth}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.25\linewidth}@{}}
+\caption{Règles de gestion R1 à R11}\label{tab:regles}\\
+\toprule \textbf{Règle} & \textbf{Énoncé} & \textbf{Vérifiée par} & \textbf{En cas de violation} \\ \midrule
+\endfirsthead
+\toprule \textbf{Règle} & \textbf{Énoncé} & \textbf{Vérifiée par} & \textbf{En cas de violation} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\regle{R1} & L'étudiant existe et a le statut \statut{ACTIF} ; un étudiant \statut{SUSPENDU}, \statut{EN\_STAGE} ou \statut{DIPLOME} ne peut pas candidater. & Étape 2 : S1 \code{verifierEtudiant}. & Soumission rejetée, courriel de rejet avec le motif. \\ \midrule
+\regle{R2} & L'offre est \statut{ACTIVE} ; son entreprise est référencée et \statut{ACTIVE}. & Étape 3 : S3 \code{verifierDisponibilite}, S2 \code{verifierEntreprise}. & Soumission rejetée. \\ \midrule
+\regle{R3} & La date limite de candidature n'est pas dépassée. & Étape 4 : d'après la disponibilité renvoyée par S3. & Soumission rejetée. \\ \midrule
+\regle{R4} & L'offre a au moins une place disponible. & Étape 4 : d'après S3. & Soumission rejetée. \\ \midrule
+\regle{R5} & Pas de doublon : une seule candidature non annulée par couple (étudiant, offre). & Étape 4 : S4 \code{verification-doublon} ; puis index unique en base à l'enregistrement. & Rejet au contrôle ; 409 si deux dépôts simultanés passent le contrôle. \\ \midrule
+\regle{R6} & Au plus cinq candidatures actives (\statut{DEPOSEE} ou \statut{EN\_COURS\_EVALUATION}) par étudiant. & Étape 4 : S4 compte des actives ; puis verrou par étudiant à l'enregistrement. & Rejet au contrôle ; 409 à l'enregistrement. \\ \midrule
+\regle{R7} & Compatibilité : la filière de l'étudiant est acceptée par l'offre et son niveau est au moins le niveau minimum. Le score de compétences est seulement indicatif. & Étape 3 : S3 \code{verifierCompatibilite}. & Soumission rejetée. \\ \midrule
+\regle{R8} & Annulation possible seulement tant que la candidature est \statut{DEPOSEE}. & S4 \code{DELETE /candidatures/\{id\}}. & 409 \code{ANNULATION\_IMPOSSIBLE}. \\ \midrule
+\regle{R9} & Transitions autorisées : \statut{DEPOSEE} $\rightarrow$ \statut{EN\_COURS\_EVALUATION} $\rightarrow$ \statut{ACCEPTEE} ou \statut{REFUSEE} ; \statut{DEPOSEE} $\rightarrow$ \statut{ANNULEE}. & S4, à chaque changement de statut. & 409 \code{TRANSITION\_INTERDITE}. \\ \midrule
+\regle{R10} & À l'acceptation : une place de moins ; l'offre devient \statut{POURVUE} à zéro ; dossier de stage créé dans S6 ; étudiant passé \statut{EN\_STAGE} dans S1. & Étape 9 : S3 \code{decrementerPlaces}, S6 \code{POST /stages}, S1 \code{changerStatutEtudiant}. & 409 si plus aucune place ; reprise possible des étapes de suivi après une panne. \\ \midrule
+\regle{R11} & Demande de complément : l'étudiant est notifié, la candidature reste \statut{EN\_COURS\_EVALUATION} et la décision revient à l'entreprise. & Passerelle de décision et boucle du processus. & – (cas nominal de la boucle). \\
+\end{longtable}
+
+\section{Commentaires}
+
+\subsection{Pourquoi un contrôle en deux temps pour R5 et R6}
+Le contrôle de l'étape~4 suffit pour un dépôt isolé et permet un rejet propre, avec courriel. Mais deux dépôts du même étudiant envoyés au même instant passeraient tous deux le contrôle avant que l'un soit enregistré. L'enregistrement revérifie donc les deux règles là où elles ne peuvent pas être contournées : l'index unique pour R5 et un verrou nommé par étudiant pour R6 (voir le modèle de données, figure~\ref{fig:donnees}). Le second dépôt reçoit alors une erreur de conflit au lieu de créer une sixième candidature active. Un test d'intégration lance des enregistrements concurrents sur la vraie base pour le vérifier.
+
+\subsection{R7 : compatibilité et score indicatif}
+L'offre déclare ses filières acceptées et un niveau minimum (1A, 2A ou 3A). S3 compare ces critères au profil renvoyé par S1. Le score de compétences, pourcentage des compétences demandées que l'étudiant déclare, est calculé et affiché à l'entreprise comme à l'étudiant, mais il ne bloque jamais une candidature : un étudiant peut combler un écart pendant son stage, et la décision appartient à l'entreprise.
+
+\subsection{R8 et R9 : décision de conception}
+Le passage à \statut{EN\_COURS\_EVALUATION} est déclenché par l'entreprise elle-même (« Démarrer l'évaluation ») : à partir de ce moment, l'étudiant ne peut plus retirer sa candidature. Ce choix rend la règle R8 explicite pour les deux parties : l'interface de l'étudiant indique pourquoi le bouton d'annulation a disparu.
+
+\subsection{R10 : cohérence entre trois services}
+L'acceptation modifie trois services. L'ordre retenu protège la ressource rare : la place est réservée en premier (S3, opération atomique) ; si elle n'est plus disponible, la décision est refusée (409) et rien n'est modifié. Viennent ensuite le statut \statut{ACCEPTEE} et la notification, puis le dossier de stage (S6) et le statut de l'étudiant (S1). Si l'un de ces deux derniers appels échoue, l'étape est marquée en échec dans le journal, le responsable la voit dans son espace et peut la relancer (« Relancer le suivi ») ; la création du stage étant idempotente, la relance ne crée jamais de doublon.
+
+\subsection{R11 : boucle de complément}
+La demande de complément n'est pas une décision finale. Le processus notifie l'étudiant avec le commentaire de l'entreprise, ajoute une ligne à l'historique (statut inchangé) et recrée la tâche de décision. L'entreprise peut demander plusieurs compléments, puis accepter ou refuser.
+
+\section{Couverture par les tests}
+
+Chaque règle est vérifiée à plusieurs niveaux : par des tests unitaires du service qui la porte, par des tests d'intégration sur MySQL pour celles qui reposent sur la base, par la collection Postman et par le test de bout en bout (chapitre~\ref{chap:tests}).
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Règle} & \textbf{Classes de test JUnit} \\ \midrule
+R1 & \code{ServiceEtudiantsTest}, \code{EtudiantsSoapTest}, \code{OrchestrateurDirectTest}, \code{RessourceCandidaturesTest}, \code{CandidatureDaoJdbcIT} \\
+R2 & \code{ServiceEntreprisesTest}, \code{ServiceOffresTest}, \code{OrchestrateurDirectTest} \\
+R3, R4 & \code{ServiceOffresTest}, \code{ServiceCandidaturesTest}, \code{OrchestrateurDirectTest} \\
+R5, R6 & \code{ServiceCandidaturesTest}, \code{OrchestrateurDirectTest}, \code{CandidatureDaoJdbcIT} (enregistrements concurrents) \\
+R7 & \code{ServiceOffresTest}, \code{OrchestrateurDirectTest} \\
+R8, R9 & \code{ServiceCandidaturesTest}, \code{RessourceCandidaturesTest}, \code{OrchestrateurBonitaTest}, \code{PortailTest} \\
+R10 & \code{ServiceOffresTest}, \code{OffreDaoJdbcIT}, \code{ServiceSuiviTest}, \code{OrchestrateurDirectTest} \\
+R11 & \code{OrchestrateurDirectTest} ; Postman et bout en bout \\
+\bottomrule
+\end{tabularx}
+\caption{Tests JUnit qui vérifient chaque règle}\label{tab:regles-tests}
+\end{table}

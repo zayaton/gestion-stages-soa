@@ -1,0 +1,12 @@
+GET /api/v1/candidatures/9999
+X-Correlation-Id: rapport-0001
+X-API-Key: cle-postman-2026-Rb3WsE
+
+--> HTTP 404
+{
+  "code": "CANDIDATURE_INTROUVABLE",
+  "message": "Aucune candidature ne correspond à l'identifiant 9999.",
+  "details": [],
+  "timestamp": "2026-11-10T01:00Z",
+  "path": "/api/v1/candidatures/9999"
+}

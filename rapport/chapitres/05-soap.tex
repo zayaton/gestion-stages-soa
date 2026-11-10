@@ -1,0 +1,71 @@
+\chapter{Documentation des services SOAP}\label{chap:soap}
+
+\section{Principes communs}
+
+Les trois services de référentiel suivent le même modèle.
+
+\begin{itemize}
+  \item \textbf{Contrat d'abord.} Chaque WSDL (style \emph{document/literal}, SOAP~1.1) est écrit à la main et documenté opération par opération (\code{wsdl:documentation}) ; il fait foi. Les classes Java sont générées à la compilation par \code{wsimport}, et l'implémentation renvoie au fichier par l'attribut \code{wsdlLocation} de \code{@WebService} : le WSDL publié par le service est exactement celui du dépôt.
+  \item \textbf{Espaces de noms.} \code{http://stages.inpt.ma/etudiants}, \code{…/entreprises}, \code{…/offres} ; l'en-tête de corrélation est dans \code{http://stages.inpt.ma/commun}.
+  \item \textbf{Adresses.} \code{http://localhost:8081/ws/etudiants}, \code{:8082/ws/entreprises}, \code{:8083/ws/offres} ; le WSDL s'obtient en ajoutant \code{?wsdl} (lecture sans authentification).
+  \item \textbf{Validation.} Les données reçues sont validées (Bean Validation : formats du matricule, de l'ICE, du téléphone, longueur des champs, valeurs énumérées) avant tout accès à la base ; chaque champ invalide produit un message en français dans le détail de la faute.
+  \item \textbf{Fautes typées.} Toute erreur prévue est une faute déclarée dans le WSDL, avec un détail structuré : un \code{code} stable, exploitable par un programme, un \code{message} en français et une liste de \code{details}. Aucune trace d'exécution Java n'est renvoyée.
+  \item \textbf{Sécurité.} Chaque appel doit porter un en-tête WS-Security \emph{UsernameToken} (section~\ref{sec:securite-soap}).
+\end{itemize}
+
+\begin{table}[H]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}X l@{}}
+\toprule
+\textbf{Faute} & \textbf{Situation} & \textbf{Exemples de codes} \\ \midrule
+\code{*IntrouvableFault} & L'identifiant ne correspond à aucun étudiant, entreprise ou offre. & \code{ETUDIANT\_INTROUVABLE} \\
+\code{DonneesInvalidesFault} & Données absentes ou mal formées. & \code{DONNEES\_INVALIDES} \\
+\code{ConflitFault} & L'opération contredit l'état ou une règle de gestion. & \code{TRANSITION\_INTERDITE}, \code{PLUS\_DE\_PLACE} \\
+\code{ServiceIndisponibleFault} & La base ou un service dépendant ne répond pas. & \code{SERVICE\_OFFRES\_INDISPONIBLE} \\
+\code{ErreurInterneFault} & Erreur inattendue ; le détail technique reste dans les journaux. & \code{ERREUR\_INTERNE} \\
+\bottomrule
+\end{tabularx}
+\caption{Fautes SOAP communes aux trois services}\label{tab:fautes}
+\end{table}
+
+\section{Opérations}
+
+Les tableaux suivants sont produits automatiquement à partir des WSDL du dépôt (script \code{rapport/outils/generer\_tables.py}) : ils ne peuvent pas diverger du contrat. La dernière colonne indique les fautes métier attendues pour chaque opération ; toutes peuvent en plus renvoyer \code{ServiceIndisponibleFault} et \code{ErreurInterneFault}.
+
+\subsection{S1 Gestion des étudiants}
+Le service gère le profil des étudiants et leurs compétences déclarées. \code{verifierEtudiant} est l'opération appelée par le processus à l'étape~2 : elle ne lève pas de faute pour un étudiant inconnu, mais répond \code{existe=false}, ce qui permet au processus de rejeter proprement la candidature (règle R1) au lieu de partir en erreur technique.
+{\small\input{generes/soap-etudiants}}
+
+\subsection{S2 Gestion des entreprises}
+Le service gère les entreprises partenaires et leur responsable de contact. \code{consulterOffresEntreprise} appelle S3 : S2 ne stocke aucune offre. La suppression d'une entreprise qui a publié des offres est refusée (\code{ConflitFault}) ; il faut la passer en \statut{INACTIVE}.
+{\small\input{generes/soap-entreprises}}
+
+\subsection{S3 Gestion des offres de stage}
+Le service gère les offres et porte trois vérifications du processus : la disponibilité (offre active, date limite, places), la compatibilité avec le profil d'un étudiant (filière acceptée, niveau suffisant, score indicatif de compétences) et le retrait atomique d'une place lors d'une acceptation.
+{\small\input{generes/soap-offres}}
+
+\section{Extrait de WSDL}
+
+Le listing~\ref{lst:wsdl} montre la définition de \code{verifierEtudiant} : le type de la réponse, puis l'opération dans le \code{portType} avec ses messages et ses fautes.
+
+\lstinputlisting[language=XMLfr, caption={Extrait de \code{etudiants.wsdl} : opération \code{verifierEtudiant}}, label={lst:wsdl}]{generes/extrait-wsdl-etudiants.xml}
+
+\section{Exemples d'échanges}
+
+Les échanges suivants ont été enregistrés sur les services en fonctionnement par \code{rapport/outils/capturer\_exemples.py}.
+
+\subsection{Vérification d'un étudiant suspendu}
+\lstinputlisting[language=XMLfr, caption={Requête \code{verifierEtudiant} avec en-tête WS-Security et corrélation}]{generes/exemples/soap-verifier-suspendu-requete.xml}
+\lstinputlisting[language=XMLfr, caption={Réponse : l'étudiante existe mais n'est pas éligible (règle R1)}]{generes/exemples/soap-verifier-suspendu-reponse.xml}
+
+\subsection{Faute typée}
+Pour un identifiant inconnu, \code{consulterEtudiant} renvoie la faute déclarée dans le WSDL, avec son détail structuré. Conformément à SOAP~1.1, le statut HTTP d'une faute est 500.
+\lstinputlisting[language=XMLfr, caption={Réponse à \code{consulterEtudiant(9999)} : \code{EtudiantIntrouvableFault}}]{generes/exemples/soap-consulter-inconnu-reponse.xml}
+
+Sans en-tête WS-Security, la même requête est refusée avant d'atteindre le service, par une faute \code{wsse:InvalidSecurity} (tableau~\ref{tab:wsse}).
+
+\section{Implémentation}
+
+Chaque service SOAP comprend quatre couches : l'\emph{endpoint} JAX-WS généré à partir du WSDL, qui ne fait que convertir les types ; un service métier qui applique les règles et les transitions de statut ; un DAO JDBC ; et des clients SOAP vers les autres services quand c'est nécessaire (S2 vers S3, S3 vers S1 et S2). Les gestionnaires JAX-WS (\emph{handlers}) communs, définis dans le module \code{common}, vérifient le jeton WS-Security, reprennent l'identifiant de corrélation et journalisent chaque appel avec le compte qui l'a fait.
+
+Le serveur utilisé est celui intégré à la JDK (\code{com.sun.net.httpserver}) piloté par Metro : aucun serveur d'applications n'est nécessaire, chaque service démarre en une à deux secondes.

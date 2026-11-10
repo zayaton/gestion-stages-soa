@@ -1,0 +1,18 @@
+% Généré par rapport/outils/generer_tables.py à partir de contracts/src/main/resources/wsdl/offres.wsdl. Ne pas modifier.
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.21\linewidth}>{\raggedright\arraybackslash\footnotesize}p{0.22\linewidth}@{}}
+\caption{Opérations SOAP de S3 Offres (port 8083, 8 opérations)}\label{tab:soap-offres}\\
+\toprule \textbf{Opération} & \textbf{Entrée} & \textbf{Sortie} & \textbf{Fautes métier} \\ \midrule
+\endfirsthead
+\toprule \textbf{Opération} & \textbf{Entrée} & \textbf{Sortie} & \textbf{Fautes métier} \\ \midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textbf{\texttt{creerOffre}}\newline {\footnotesize Crée une offre après avoir vérifié l'entreprise auprès de S2.} & \texttt{offre} : Offre & \texttt{offreCreee} : Offre & \texttt{DonneesInvalides} \newline \texttt{ServiceIndisponible} \\ \midrule
+\textbf{\texttt{modifierOffre}}\newline {\footnotesize Remplace l'offre. Le statut suit les transitions autorisées ; l'entreprise ne change pas.} & \texttt{id} : long \newline \texttt{offre} : Offre & \texttt{offreModifiee} : Offre & \texttt{OffreIntrouvable} \newline \texttt{DonneesInvalides} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{supprimerOffre}}\newline {\footnotesize Supprime une offre en BROUILLON. Une offre publiée se clôture.} & \texttt{id} : long & – & \texttt{OffreIntrouvable} \newline \texttt{Conflit} \\ \midrule
+\textbf{\texttt{consulterOffre}}\newline {\footnotesize Renvoie une offre.} & \texttt{id} : long & \texttt{offre} : Offre & \texttt{OffreIntrouvable} \\ \midrule
+\textbf{\texttt{listerOffres}}\newline {\footnotesize Liste les offres selon des critères facultatifs.} & \texttt{filtre} : FiltreOffres, facultatif & \texttt{offre} : Offre[], facultatif & \texttt{DonneesInvalides} \\ \midrule
+\textbf{\texttt{verifierDisponibilite}}\newline {\footnotesize Vérifie que l'offre est active (R2), avant sa date limite (R3) et avec une place (R4). Une offre inconnue donne existe=false, pas une faute.} & \texttt{offreId} : long & \texttt{disponibilite} : Disponibilite & \texttt{ServiceIndisponible} \\ \midrule
+\textbf{\texttt{verifierCompatibilite}}\newline {\footnotesize Compare l'offre au profil de l'étudiant obtenu auprès de S1 (R7, R3) et calcule le score indicatif.} & \texttt{offreId} : long \newline \texttt{etudiantId} : long & \texttt{compatibilite} : Compatibilite & \texttt{OffreIntrouvable} \newline \texttt{EtudiantIntrouvable} \newline \texttt{ServiceIndisponible} \\ \midrule
+\textbf{\texttt{decrementerPlaces}}\newline {\footnotesize Retire une place de façon atomique. L'offre passe en POURVUE à zéro (R10).} & \texttt{offreId} : long & \texttt{offre} : Offre & \texttt{OffreIntrouvable} \newline \texttt{Conflit} \\
+\end{longtable}
