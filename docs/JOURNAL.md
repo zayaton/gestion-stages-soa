@@ -325,3 +325,4 @@ Version finale : présentation, prérequis, démarrage rapide, commandes, organi
 - Le mur de zellige et les étoiles sont retirés.
 - Retouches : plus d'illustration dans les états vides ; page de connexion réduite au titre (texte de présentation et liste des trois acteurs retirés).
 - Connexion : texte de présentation et trois acteurs rétablis, plus bas sous le titre et en plus grand.
+- Connexion (correction) : texte de présentation retiré pour de bon ; le titre « La plateforme des stages » est agrandi et posé plus bas.
