@@ -22,7 +22,7 @@ Les tests de service et de bout en bout modifient les données : ils sont joués
 
 \section{Scénarios fonctionnels}
 
-Le tableau~\ref{tab:scenarios} présente les scénarios principaux, leur résultat attendu et le résultat obtenu lors de la dernière exécution du test de bout en bout (orchestration \modeBoutEnBout{}, processus simulé). La colonne « Obtenu » indique le nombre de vérifications du test qui couvrent le scénario ; toutes ont réussi.
+Le tableau~\ref{tab:scenarios} présente les scénarios principaux, leur résultat attendu et le résultat obtenu lors de la dernière exécution du test de bout en bout (orchestration \modeBoutEnBout{}, processus déployé dans le vrai Bonita~2025.2). La colonne « Obtenu » indique le nombre de vérifications du test qui couvrent le scénario ; toutes ont réussi.
 
 \begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.30\linewidth}>{\raggedright\arraybackslash}p{0.44\linewidth}>{\raggedright\arraybackslash}p{0.20\linewidth}@{}}
 \caption{Scénarios, résultats attendus et obtenus}\label{tab:scenarios}\\
@@ -35,7 +35,7 @@ Le tableau~\ref{tab:scenarios} présente les scénarios principaux, leur résult
 \lignes{generes/tests-scenarios.tex}
 \end{longtable}
 
-Le même test passe à l'identique en mode direct, en mode bonita face au processus simulé avec connecteurs, et en mode bonita sans connecteur (mode secours) : \nbBoutEnBout{} vérifications à chaque fois, panne de S3 comprise. Chaque scénario vérifie aussi le courriel reçu dans Mailpit (destinataire, sujet, motif du rejet).
+Le même test passe à l'identique dans les quatre configurations : mode direct, processus simulé avec connecteurs, processus simulé en mode secours, et vrai Bonita avec le processus déployé : \nbBoutEnBout{} vérifications à chaque fois, panne de S3 comprise. Chaque scénario vérifie aussi le courriel reçu dans Mailpit (destinataire, sujet, motif du rejet).
 
 \section{Tests JUnit}
 

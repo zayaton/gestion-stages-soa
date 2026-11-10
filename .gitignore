@@ -41,3 +41,4 @@ rapport/*.lot
 rapport/*.out
 rapport/*.synctex.gz
 rapport/outils/__pycache__/
+docs/bonita/deploiement/target/

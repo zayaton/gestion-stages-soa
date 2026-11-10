@@ -2,20 +2,28 @@
 
 \section{Vue d'ensemble}
 
-Le processus « Candidature » (version 1.0) est modélisé en BPMN~2.0 et exécuté par Bonita Studio Community. Il est déclenché à chaque dépôt et couvre les neuf étapes de l'énoncé, de la réception de la candidature à la mise à jour du suivi des stages.
+Le processus « Candidature » (version 1.0) est modélisé en BPMN~2.0 et exécuté par Bonita Community 2025.2. Il est déclenché à chaque dépôt et couvre les neuf étapes de l'énoncé, de la réception de la candidature à la mise à jour du suivi des stages.
 
 Le diagramme comprend un bassin, trois couloirs (Étudiant, Système, Entreprise), dix-huit tâches de service, une tâche humaine, quatre passerelles exclusives, un minuteur de relance, quatre événements de fin et un sous-processus événementiel de gestion des erreurs. Son fichier BPMN (\code{bpmn/processus-candidature.bpmn}) est le même que celui qu'affiche le portail : les identifiants des nœuds sont les noms d'étapes que S4 enregistre dans son journal, ce qui permet de colorer le diagramme au fur et à mesure du traitement (chapitre~\ref{chap:interface}).
-
-La figure~\ref{fig:bpmn-export} montre le diagramme tel qu'il est défini dans le fichier, et la figure~\ref{fig:bpmn-bonita} le même processus dans Bonita Studio.
 
 \begin{sidewaysfigure}
 \centering
 \includegraphics[width=\linewidth]{bpmn-processus.png}
-\caption{Processus « Candidature » : diagramme BPMN exporté (rendu par bpmn-js depuis \code{processus-candidature.bpmn})}\label{fig:bpmn-export}
+\caption{Processus « Candidature » : diagramme BPMN (rendu par bpmn-js depuis \code{processus-candidature.bpmn})}\label{fig:bpmn-export}
 \end{sidewaysfigure}
 
-% TODO capture : diagramme complet du processus « Candidature » dans Bonita Studio, trois couloirs visibles.
-\capture{bonita-diagramme.png}{80mm}{Le processus « Candidature » dans Bonita Studio}{fig:bpmn-bonita}
+Le processus existe sous deux formes, qui partagent les mêmes tâches, passerelles et noms :
+\begin{itemize}
+  \item \textbf{le modèle} (figure~\ref{fig:bpmn-export}) : fichier BPMN à importer dans Bonita Studio, avec des connecteurs SOAP et REST et le sous-processus d'erreur ; sa construction est décrite pas à pas dans \code{docs/bonita/GUIDE\_BONITA.md} ;
+  \item \textbf{la version déployée} : construite par programme avec l'API du moteur Bonita (\code{docs/bonita/deploiement}), empaquetée en archive \code{bpmn/Candidature--1.0.bar} et déployée par l'API REST de Bonita (\code{scripts\textbackslash deployer-bonita.ps1}). Elle utilise le \emph{mode secours} du guide : chaque tâche de service est une opération Groovy qui appelle elle-même les services, sans connecteur. Les connecteurs SOAP et REST ne sont en effet pas fournis avec Bonita Community 2025.2 ; ils s'ajoutent depuis la Marketplace.
+\end{itemize}
+C'est la version déployée qui a été vérifiée de bout en bout face au vrai Bonita (section~\ref{sec:bpmn-verification}).
+
+\begin{figure}[H]
+\centering
+{\setlength{\fboxsep}{0pt}\color{filet}\fbox{\includegraphics[width=0.9\linewidth]{bonita-processus.png}}}
+\caption{Le processus « Candidature » 1.0 déployé et activé dans Bonita (application d'administration)}\label{fig:bonita-processus}
+\end{figure}
 
 \section{Déclenchement et données du processus}
 
@@ -35,10 +43,7 @@ S4 démarre un cas par l'API REST de Bonita : connexion (\code{/loginservice}, j
 \caption{Contrat d'instanciation du processus}\label{tab:contrat-bonita}
 \end{table}
 
-Le processus n'a qu'une variable, \code{dossier} (\code{java.util.Map}), initialisée à partir du contrat et complétée par chaque tâche (résultat des vérifications, règle violée, identifiant de la candidature, décision…). Avec une seule variable, chaque tâche n'a qu'une opération, et la logique de lecture des réponses est regroupée dans une classe Groovy, \code{inpt.SoaProcessus}, testée hors de Bonita.
-
-% TODO capture : onglet Contrat du bassin dans Bonita Studio (soumissionId, etudiantId, offreId, lettreMotivation).
-\capture{bonita-contrat.png}{55mm}{Contrat du processus dans Bonita Studio}{fig:bonita-contrat}
+Le processus n'a qu'une variable, \code{dossier} (une table associative), initialisée à partir du contrat et complétée par chaque tâche (résultat des vérifications, règle violée, identifiant de la candidature, décision…). Avec une seule variable, chaque tâche n'a qu'une opération, et la logique d'appel et de lecture des réponses est regroupée dans une classe Groovy, \code{inpt.SoaProcessus}, livrée dans l'archive du processus et testée hors de Bonita.
 
 \section{Étapes du processus}
 
@@ -69,6 +74,8 @@ Le processus n'a qu'une variable, \code{dossier} (\code{java.util.Map}), initial
 – & Relance de l'entreprise (minuteur de 7 jours) & REST S5 & – \\
 \end{longtable}
 
+Chaque tâche inscrit son étape dans le journal de S4 (\code{POST /soumissions/\{id\}/etapes}) : le portail suit ainsi le cas Bonita en direct.
+
 \section{Passerelles de décision}
 
 Les conditions sont des expressions Groovy sur la variable \code{dossier}. Chaque passerelle a un flux par défaut, emprunté si aucune condition n'est vraie : le processus ne peut jamais rester bloqué sur une passerelle.
@@ -96,50 +103,54 @@ Les deux passerelles intermédiaires (« Étudiant éligible ? », « Offre exis
 
 \section{Tâche humaine et boucle de complément}
 
-« Décision de l'entreprise » est une tâche humaine du couloir Entreprise. Son contrat attend une \code{decision} (ACCEPTER, REFUSER ou DEMANDER\_COMPLEMENT, contrainte vérifiée par Bonita) et un \code{commentaire}. L'entreprise décide depuis le portail du projet : S4 vérifie d'abord la règle R10 (une place est-elle encore disponible ?), puis recherche la tâche du cas, se l'assigne et l'exécute par l'API de Bonita. Un formulaire généré à partir du contrat permet aussi de décider depuis le portail Bonita.
+« Décision de l'entreprise » est une tâche humaine du couloir Entreprise. Son contrat attend une \code{decision} (ACCEPTER, REFUSER ou DEMANDER\_COMPLEMENT, contrainte vérifiée par Bonita) et un \code{commentaire}. L'entreprise décide depuis le portail du projet : S4 vérifie d'abord la règle R10 (une place est-elle encore disponible ?), puis recherche la tâche du cas, se l'assigne et l'exécute par l'API de Bonita.
 
-La demande de complément (R11) passe par la tâche « Demande de complément », qui notifie l'étudiant, puis revient à la décision. Un minuteur de sept jours, en bordure de la tâche humaine, déclenche « Relance de l'entreprise » si aucune décision n'est prise ; la tâche de décision est ensuite recréée.
+La demande de complément (R11) passe par la tâche « Demande de complément », qui notifie l'étudiant, puis revient à la décision. Un minuteur de sept jours, en bordure de la tâche humaine, déclenche « Relance de l'entreprise » si aucune décision n'est prise ; la tâche de décision est ensuite recréée. La figure~\ref{fig:bonita-tache} montre un cas en attente : la tâche humaine et son minuteur sont actifs.
+
+\begin{figure}[H]
+\centering
+{\setlength{\fboxsep}{0pt}\color{filet}\fbox{\includegraphics[width=0.9\linewidth]{bonita-tache-decision.png}}}
+\caption{Dans Bonita : la tâche « Décision de l'entreprise » en attente, avec son minuteur de relance}\label{fig:bonita-tache}
+\end{figure}
 
 \section{Gestion des erreurs et des indisponibilités}
 
-Chaque connecteur est configuré pour lever l'erreur BPMN \code{SERVICE\_INDISPONIBLE} s'il échoue (délai dépassé, réponse 5xx, faute SOAP \code{ServiceIndisponibleFault}). Un unique sous-processus événementiel, « Gestion des erreurs techniques », intercepte cette erreur où qu'elle survienne :
+\subsection{Dans le modèle}
+Chaque connecteur est configuré pour lever l'erreur BPMN \code{SERVICE\_INDISPONIBLE} s'il échoue (délai dépassé, réponse 5xx, faute \code{ServiceIndisponibleFault}). Un unique sous-processus événementiel, « Gestion des erreurs techniques », intercepte cette erreur où qu'elle survienne : « Signaler l'interruption » (S4 passe la soumission en \statut{ERREUR}, avec la dernière étape réussie), « Alerter le responsable » (courriel \code{ALERTE\_RESPONSABLE}), puis fin « Traitement interrompu ». Un seul sous-processus plutôt qu'un événement de bordure par tâche garde le diagramme lisible et garantit un traitement identique quelle que soit l'étape interrompue.
 
-\begin{enumerate}
-  \item « Signaler l'interruption » : REST S4 \code{POST /soumissions/\{id\}/erreur} ; la soumission passe \statut{ERREUR}, avec la dernière étape réussie ;
-  \item « Alerter le responsable » : REST S5, courriel \code{ALERTE\_RESPONSABLE} au responsable des stages ;
-  \item fin « Traitement interrompu ».
-\end{enumerate}
+\subsection{Dans la version déployée}
+Sans connecteur, une panne ne peut pas lever d'erreur BPMN : c'est la classe Groovy qui fait le même traitement. Quand un service ne répond pas, la méthode de la tâche signale l'interruption à S4 (soumission en \statut{ERREUR}), envoie l'alerte au responsable, puis échoue : la tâche apparaît « en erreur » dans Bonita (figure~\ref{fig:bonita-erreur}), où un administrateur peut la rejouer une fois le service rétabli. Côté portail, l'étudiant voit « Traitement interrompu » ; aucune candidature à moitié enregistrée ne subsiste.
 
-Dans ce sous-processus, un échec de connecteur est ignoré : on ne traite pas une erreur par une autre erreur. Un seul sous-processus plutôt qu'un événement de bordure par tâche garde le diagramme lisible et garantit un traitement identique quelle que soit l'étape interrompue. Côté portail, l'étudiant voit « Traitement interrompu » et peut redéposer sa candidature plus tard ; aucune candidature à moitié enregistrée ne subsiste.
+\begin{figure}[H]
+\centering
+{\setlength{\fboxsep}{0pt}\color{filet}\fbox{\includegraphics[width=0.9\linewidth]{bonita-taches.png}}}
+\caption{Dans Bonita : la tâche « Vérification de l'offre » en erreur pendant une panne de S3}\label{fig:bonita-erreur}
+\end{figure}
 
-% TODO capture : le sous-processus événementiel « Gestion des erreurs techniques » dans Bonita Studio.
-\capture{bonita-sous-processus-erreur.png}{50mm}{Sous-processus de gestion des erreurs dans Bonita Studio}{fig:bonita-erreur}
-
-\section{Connecteurs}
+\section{Connecteurs du modèle}
 
 \subsection{Connecteurs SOAP}
-Les tâches qui appellent S1, S2 ou S3 utilisent le connecteur Web Service (SOAP~1.1) de Bonita. L'enveloppe est produite par la classe Groovy (par exemple \code{SoaProcessus.enveloppeVerifierEtudiant(dossier)}) et contient l'en-tête WS-Security du compte \code{bonita} ainsi que l'identifiant de corrélation du cas. La sortie \code{responseDocumentBody} est lue par la méthode \code{apres…} correspondante, qui met à jour \code{dossier} et inscrit l'étape dans le journal de S4.
+Dans le modèle, les tâches qui appellent S1, S2 ou S3 utilisent le connecteur Web Service (SOAP~1.1) de Bonita. L'enveloppe est produite par la classe Groovy (par exemple \code{SoaProcessus.enveloppeVerifierEtudiant(dossier)}) et contient l'en-tête WS-Security du compte \code{bonita} ainsi que l'identifiant de corrélation du cas. La sortie \code{responseDocumentBody} est lue par la méthode \code{apres…} correspondante, qui met à jour \code{dossier} et inscrit l'étape dans le journal de S4.
 
 \subsection{Connecteurs REST}
 Les tâches qui appellent S4, S5 ou S6 utilisent le connecteur REST, avec les en-têtes \code{X-API-Key} (clé du client \code{bonita}), \code{X-Correlation-Id} et \code{Content-Type: application/json}. Les URL et les corps sont, eux aussi, fournis par la classe Groovy. Pour les deux changements de statut (\code{PATCH}), un connecteur qui ne propose pas ce verbe peut envoyer \code{POST} avec l'en-tête \code{X-HTTP-Method-Override: PATCH}, accepté par les services.
 
-% TODO capture : configuration du connecteur SOAP de « Vérification de l'étudiant » (enveloppe visible).
-\capture{bonita-connecteur-soap.png}{55mm}{Connecteur SOAP de la tâche « Vérification de l'étudiant »}{fig:bonita-soap}
-% TODO capture : configuration d'un connecteur REST (en-têtes X-API-Key visibles).
-\capture{bonita-connecteur-rest.png}{55mm}{Connecteur REST : en-têtes de sécurité et de corrélation}{fig:bonita-rest}
+\subsection{Mode secours}
+En mode secours, la version déployée, chaque tâche est réduite à une seule opération Groovy qui fait l'appel elle-même (par exemple \code{SoaProcessus.verifierEtudiant(dossier)}), avec les mêmes enveloppes SOAP, en-têtes de sécurité et corrélation que les connecteurs. Le comportement métier est identique.
 
-\subsection{Mode secours sans connecteur}
-Les connecteurs SOAP et REST ne sont pas livrés avec toutes les éditions de Bonita : ils s'ajoutent depuis la Marketplace. Si l'un manque, chaque tâche peut être réduite à une seule opération Groovy qui fait l'appel elle-même (par exemple \code{SoaProcessus.verifierEtudiant(dossier)}). Le comportement métier est identique ; seule différence, une panne ne déclenche pas l'événement d'erreur BPMN : la classe signale elle-même l'incident à S4 et au responsable.
+\section{Exécution et vérification}\label{sec:bpmn-verification}
 
-\section{Exécution et vérification}
-
-Le guide \code{docs/bonita/GUIDE\_BONITA.md} décrit la construction pas à pas dans le Studio, et \code{CHECKLIST\_BONITA.md} les vérifications après déploiement. Sans dépendre du Studio, le processus est vérifié de deux façons :
+Le processus est vérifié à trois niveaux :
 \begin{itemize}
   \item le fichier BPMN est relu sans avertissement par bpmn-moddle, l'analyseur de bpmn-js ;
-  \item une simulation (\code{tests/bonita/SimulationBonita.groovy}, Groovy 3.0.25 comme Bonita 2025.2) répond à l'API REST de Bonita et déroule le graphe du processus tâche par tâche avec la classe livrée. Le test de bout en bout passe à l'identique en mode direct, en simulation avec connecteurs et en simulation en mode secours, panne de S3 comprise.
+  \item une simulation (\code{tests/bonita/SimulationBonita.groovy}) répond à l'API REST de Bonita et déroule le graphe tâche par tâche avec la classe livrée, avec connecteurs comme en mode secours ;
+  \item surtout, le test de bout en bout a été joué face au \textbf{vrai Bonita Community 2025.2}, processus déployé : les 59 vérifications des scénarios et les 6 de la panne de S3 ont réussi, chaque candidature passant par un cas Bonita.
 \end{itemize}
 
-% TODO capture : portail Bonita, un cas en attente sur « Décision de l'entreprise ».
-\capture{bonita-portail-cas.png}{55mm}{Portail Bonita : cas en attente de la décision de l'entreprise}{fig:bonita-cas}
-% TODO capture : portail Bonita, un cas archivé terminé par « Candidature acceptée ».
-\capture{bonita-cas-termine.png}{55mm}{Portail Bonita : cas terminé par l'acceptation}{fig:bonita-termine}
+\begin{figure}[H]
+\centering
+{\setlength{\fboxsep}{0pt}\color{filet}\fbox{\includegraphics[width=0.9\linewidth]{bonita-cas-archives.png}}}
+\caption{Dans Bonita : le cas d'une candidature acceptée, terminé et archivé}\label{fig:bonita-termine}
+\end{figure}
+
+Les captures Bonita de ce chapitre sont produites par \code{scripts\textbackslash captures-bonita.ps1}, qui redéploie le processus, joue trois cas réels (acceptation, attente de décision, panne de S3) et capture l'application d'administration de Bonita.

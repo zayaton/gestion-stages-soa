@@ -62,7 +62,7 @@ Entreprise & \code{contact@novapay-maghreb.ma} & \code{Entreprise@2026} \\
 \section{Mode d'orchestration}
 
 \begin{itemize}
-  \item \textbf{bonita} (par défaut) : le processus doit être déployé dans Bonita Studio, en suivant \code{docs/bonita/GUIDE\_BONITA.md} (import du fichier BPMN, contrat, connecteurs, classe Groovy, déploiement). S4 vérifie au démarrage que Bonita répond ; sinon, \code{start-all} l'indique et les dépôts répondent 503.
+  \item \textbf{bonita} (par défaut) : le processus doit être déployé dans Bonita. Bonita Studio ouvert (il démarre le serveur Bonita), une commande suffit : \code{.\textbackslash scripts\textbackslash deployer-bonita.ps1}. La version à connecteurs se construit à la main dans le Studio en suivant \code{docs/bonita/GUIDE\_BONITA.md}. S4 vérifie au démarrage que Bonita répond ; sinon, \code{start-all} l'indique et les dépôts répondent 503.
   \item \textbf{direct} : aucune dépendance à Bonita ; S4 exécute les mêmes étapes. C'est le mode des tests automatiques.
 \end{itemize}
 

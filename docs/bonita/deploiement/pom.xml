@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Construction et déploiement du processus « Candidature » dans Bonita, sans passer par les écrans du Studio.
+     Outil autonome (hors du build principal) : lancé par scripts\deployer-bonita.ps1. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>ma.inpt.stages</groupId>
+  <artifactId>deploiement-bonita</artifactId>
+  <version>1.0.0</version>
+  <name>Déploiement du processus Bonita</name>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Versions de Bonita Studio Community 2025.2 : moteur 10.4.0, Groovy 3.0.25 -->
+    <bonita.version>10.4.0</bonita.version>
+    <groovy.version>3.0.25</groovy.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.bonitasoft.engine</groupId>
+      <artifactId>bonita-common</artifactId>
+      <version>${bonita.version}</version>
+    </dependency>
+    <!-- Compilation de la classe inpt.SoaProcessus, livrée avec le processus -->
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy</artifactId>
+      <version>${groovy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-json</artifactId>
+      <version>${groovy.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.groovy</groupId>
+      <artifactId>groovy-xml</artifactId>
+      <version>${groovy.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <mainClass>ma.inpt.stages.bonita.Deploiement</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -268,3 +268,29 @@ Version finale : présentation, prérequis, démarrage rapide, commandes, organi
 ### Reste à faire
 - Publication sur GitHub : connexion (`gh auth login`) et nom du dépôt à fournir.
 - Par vous : processus dans Bonita Studio, captures, nom du professeur, vidéo.
+
+## Bonita réel : déploiement par programme (10/11)
+
+### Réalisé
+- **Le processus tourne dans le vrai Bonita Community 2025.2** (installé dans `C:\BonitaStudioCommunity-2025.2-u0`), sans clic dans le Studio :
+  `docs/bonita/deploiement` construit la définition avec l'API du moteur (bonita-common 10.4.0) — mêmes tâches, passerelles,
+  tâche humaine « Décision de l'entreprise », minuteur de 7 jours et boucle R11 que le diagramme —, compile `inpt.SoaProcessus`
+  (Groovy 3.0.25) dans l'archive `bpmn/Candidature--1.0.bar`, la déploie par l'API REST de Bonita, associe les trois acteurs à
+  `walter.bates` et active le processus. Commande : `scripts\deployer-bonita.ps1` (Studio ouvert).
+- **Mode secours** : les connecteurs SOAP et REST ne sont pas installés avec Bonita Community 2025.2 (Marketplace) ; chaque tâche
+  est une opération Groovy unique, comme décrit dans le guide.
+- **Vérification face au vrai Bonita** : `test-bout-en-bout.ps1 -Orchestration bonita -DelaiSecondes 900` : 59 + 6 vérifications réussies.
+- **Captures automatiques** : `scripts\captures-bonita.ps1` (processus déployé, tâche en attente, tâche en erreur pendant une panne de S3,
+  cas archivé) et `tests\ui\captures-outils.mjs` (Swagger UI, rapport Newman). Il ne reste que 3 captures manuelles (SoapUI, Postman).
+- Rapport (chapitre 7), guide Bonita, script vidéo, README et liste des captures mis à jour.
+
+### Incident
+- Premier déploiement : toutes les tâches en échec dans Bonita (« Incompatible assignment operation type: Left operand class
+  java.util.LinkedHashMap is not compatible with right operand class java.util.HashMap »). Bonita exige que la valeur affectée
+  à une variable garde la classe de sa valeur courante ; les méthodes Groovy renvoyaient tantôt l'une, tantôt l'autre.
+  Variable déclarée `java.util.HashMap` et chaque résultat enveloppé dans `new java.util.HashMap(...)`.
+
+### Limites
+- En mode secours, une panne met la tâche « en erreur » dans Bonita (incident signalé à S4 et au responsable par la classe)
+  au lieu de déclencher le sous-processus d'erreur du modèle.
+- Le processus déployé n'est pas un diagramme modifiable dans le Studio (construit par programme).

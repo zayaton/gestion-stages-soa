@@ -249,7 +249,7 @@ async function panne() {
     verifier("Le dépôt répond 503 avec un message clair", r.statut === 503 && r.json?.code === "SERVICE_OFFRES_INDISPONIBLE"
       && r.json?.message.includes("responsable"), JSON.stringify(r.json));
   } else {
-    verifier("Le processus s'interrompt dans son sous-processus d'erreur : soumission en ERREUR", r.statut === 202 && r.json?.statut === "ERREUR",
+    verifier("Le processus s'interrompt proprement (incident signalé) : soumission en ERREUR", r.statut === 202 && r.json?.statut === "ERREUR",
       JSON.stringify(r.json));
   }
   verifier("La liste des offres répond 503 (pas d'erreur 500)", (await appel("GET", "/api/etudiant/offres", { jeton: omar })).statut === 503);

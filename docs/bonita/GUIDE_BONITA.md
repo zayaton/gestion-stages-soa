@@ -10,6 +10,25 @@ Ce guide fait construire, dans Bonita Studio Community 2025.2, le processus BPMN
 | `processus-candidature.bpmn` | Le diagramme BPMN 2.0 (à importer, ou à reproduire à la main) |
 | `groovy/inpt/SoaProcessus.groovy` | Une seule classe Groovy : enveloppes SOAP avec WS-Security, corps REST, lecture des réponses, conditions |
 | `CHECKLIST_BONITA.md` | La liste de contrôle finale, avec le résultat attendu à chaque étape |
+| `deploiement/` | Outil qui construit et déploie le processus par programme (voir ci-dessous) |
+
+## Le plus simple : déploiement automatique (aucun clic dans le Studio)
+
+Bonita Studio ouvert (il démarre le serveur Bonita sur le port 8080), à la racine du projet :
+
+```powershell
+.\scripts\deployer-bonita.ps1                   # construit bpmn\Candidature--1.0.bar et le déploie, acteurs associés, processus activé
+.\scripts\start-all.ps1 -Orchestration bonita
+.\scripts\test-bout-en-bout.ps1 -Orchestration bonita -DelaiSecondes 900   # vérification face au vrai Bonita
+```
+
+Le processus déployé a les mêmes tâches, passerelles, tâche humaine, minuteur et boucle R11 que le diagramme, en **mode secours** :
+chaque tâche est une opération Groovy qui appelle les services avec la classe `SoaProcessus` (aucun connecteur de la Marketplace).
+Vérifié le 10/11/2026 face à Bonita Community 2025.2 : test de bout en bout réussi (59 + 6 vérifications).
+Deux différences avec la version à connecteurs construite ci-dessous : une panne met la tâche « en erreur » dans Bonita
+(l'incident est signalé à S4 et au responsable par la classe) au lieu de déclencher le sous-processus d'erreur, et le
+processus n'apparaît pas comme diagramme modifiable dans le Studio. La suite de ce guide décrit la construction manuelle,
+avec connecteurs.
 
 ## 0. Ce qui est vérifié, et ce qui ne l'est pas
 

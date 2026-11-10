@@ -28,8 +28,14 @@ cd <dossier du dépôt>
 .\scripts\start-all.ps1 -Rebuild -Orchestration direct   # construit, démarre Docker et les sept services
 ```
 
-Puis ouvrir http://localhost:8090 et se connecter avec un compte de démonstration (plus bas). Pour le mode `bonita` (par défaut),
-déployer d'abord le processus en suivant [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md).
+Puis ouvrir http://localhost:8090 et se connecter avec un compte de démonstration (plus bas).
+
+Pour le mode `bonita` (par défaut), ouvrir Bonita Studio (il démarre le serveur Bonita), puis :
+
+```powershell
+.\scripts\deployer-bonita.ps1                  # construit et déploie le processus « Candidature » 1.0
+.\scripts\start-all.ps1 -Orchestration bonita
+```
 
 ## Commandes
 
@@ -57,7 +63,7 @@ Si PowerShell refuse d'exécuter les scripts :
 | `soap-etudiants`, `soap-entreprises`, `soap-offres` | Services S1, S2, S3 |
 | `rest-candidatures`, `rest-notifications`, `rest-suivi` | Services S4, S5, S6 (contrat dans `src/main/resources/openapi.yaml`) |
 | `portal-gateway` | Portail : API des trois espaces et interface web (`src/main/resources/public`) |
-| `bpmn` | Processus BPMN « Candidature » (fichier à importer dans Bonita) |
+| `bpmn` | Processus BPMN « Candidature » : diagramme (`.bpmn`) et archive déployée dans Bonita (`.bar`) |
 | `db/init` | Schémas, comptes et données de démonstration |
 | `scripts` | Scripts PowerShell : démarrage, arrêt, réinitialisation, tests |
 | `tests` | SoapUI, Postman, test de bout en bout, simulation Bonita, parcours de l'interface |
@@ -113,7 +119,7 @@ Chaque appel porte l'en-tête `X-API-Key` (une clé par client, 401 sans clé va
 Erreurs : corps JSON uniforme `{code, message, details, timestamp, path}`. Swagger UI fonctionne sans Internet : bouton « Authorize » pour saisir la clé.
 
 **Mode d'orchestration** (variable `ORCHESTRATION_MODE`) :
-- `bonita` (par défaut) : le processus BPMN déployé dans Bonita Studio orchestre. Construction : [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md).
+- `bonita` (par défaut) : le processus BPMN déployé dans Bonita orchestre. Déploiement : `.\scripts\deployer-bonita.ps1` ; construction manuelle avec connecteurs : [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md).
 - `direct` : S4 exécute les mêmes étapes en Java ; secours pour le développement et les tests automatiques.
 
 Choix au démarrage : `.\scripts\start-all.ps1 -Orchestration direct` (ou `bonita`). Si Bonita ne répond pas, `start-all` l'indique.
@@ -153,7 +159,8 @@ clients SOAP générés par wsimport depuis les WSDL du dépôt, clients REST av
 .\scripts\tests-postman.ps1        # collection Postman (Newman) : réinitialise les bases puis joue tous les scénarios
 .\scripts\test-bout-en-bout.ps1    # par le portail : tous les scénarios, courriels Mailpit, puis une vraie panne de S3
 .\scripts\test-bout-en-bout.ps1 -Orchestration simulation   # mêmes scénarios, S4 en mode bonita face au processus simulé
-.\scripts\test-bout-en-bout.ps1 -Orchestration bonita       # mêmes scénarios face au vrai Bonita (processus déployé)
+.\scripts\test-bout-en-bout.ps1 -Orchestration bonita -DelaiSecondes 900   # face au vrai Bonita (processus déployé)
+.\scripts\captures-bonita.ps1     # captures du portail Bonita pour le rapport (redéploie, réinitialise les bases)
 .\scripts\captures-ui.ps1         # interface dans Microsoft Edge (Playwright) : cycle complet, erreurs de console, captures
 ```
 
@@ -180,9 +187,9 @@ Toutes les données sont fictives.
 | Document | Contenu |
 |---|---|
 | [rapport/rapport.pdf](rapport/rapport.pdf) | Rapport technique (compilation : `.\rapport\compiler.ps1`, XeLaTeX) |
-| [docs/CAPTURES_A_FAIRE.md](docs/CAPTURES_A_FAIRE.md) | Captures d'écran à faire à la main pour le rapport (Bonita, SoapUI, Postman) |
+| [docs/CAPTURES_A_FAIRE.md](docs/CAPTURES_A_FAIRE.md) | Captures d'écran du rapport : automatiques, et les trois à faire à la main (SoapUI, Postman) |
 | [docs/SCENARIO_VIDEO.md](docs/SCENARIO_VIDEO.md) | Script minute par minute de la vidéo de démonstration et liste de contrôle |
 | [docs/SCENARIOS_DEMO.md](docs/SCENARIOS_DEMO.md) | Un compte et une offre par scénario de démonstration |
-| [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md) | Construction du processus dans Bonita Studio, pas à pas |
+| [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md) | Déploiement automatique, ou construction du processus dans Bonita Studio pas à pas |
 | [docs/SECURITE_SOAP.md](docs/SECURITE_SOAP.md) | En-tête WS-Security à envoyer aux services SOAP |
 | [docs/JOURNAL.md](docs/JOURNAL.md) | Journal du projet : décisions, incidents, limites |

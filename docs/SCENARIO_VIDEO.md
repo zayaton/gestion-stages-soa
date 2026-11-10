@@ -16,7 +16,7 @@ Les parties A et B–C demandent un état différent (la collection Postman exig
 ## Liste de contrôle avant l'enregistrement
 
 **Une fois**
-- [ ] Bonita Studio : processus « Candidature » 1.0 construit et déployé (`docs/bonita/GUIDE_BONITA.md`), liste `docs/bonita/CHECKLIST_BONITA.md` passée. Pour la vidéo, minuteur de relance réglé sur 7 jours (pas 2 minutes).
+- [ ] Bonita Studio ouvert (il démarre le serveur Bonita), puis `.\scripts\deployer-bonita.ps1` : processus « Candidature » 1.0 déployé et activé (cela supprime aussi les cas des essais précédents).
 - [ ] SoapUI : projet `tests\soapui\Stages-SOA-soapui-project.xml` importé.
 - [ ] Postman : collection `Stages-SOA.postman_collection.json` et environnement `Stages-SOA-local.postman_environment.json` importés, environnement « Stages SOA - local » sélectionné.
 - [ ] Rapport ouvert à la figure 3.1 (architecture) : `rapport\rapport.pdf`.
@@ -40,7 +40,7 @@ Les parties A et B–C demandent un état différent (la collection Postman exig
 .\scripts\start-all.ps1 -Orchestration bonita   # doit afficher « Orchestration : bonita », sans avertissement
 .\scripts\check-health.ps1
 ```
-Bonita Studio ouvert sur le diagramme ; portail Bonita (http://localhost:8080/bonita, `walter.bates` / `bpm`) ouvert sur la liste des cas.
+Application d'administration de Bonita ouverte sur la liste des cas : http://localhost:8080/bonita/apps/adminAppBonita/admin-case-list/ (`walter.bates` / `bpm`) ; rapport ouvert à la figure 7.1 (diagramme BPMN).
 
 ---
 
@@ -77,17 +77,17 @@ Bonita Studio ouvert sur le diagramme ; portail Bonita (http://localhost:8080/bo
 ## Partie B — Hibatollah : le processus Bonita de bout en bout (3:00 – 6:30)
 
 **3:00 – 3:45 · Le diagramme**
-- Bonita Studio, diagramme « Candidature » en plein écran.
+- Rapport, figure 7.1 (diagramme BPMN) en plein écran, puis l'application d'administration de Bonita : BPM > Processus, « Candidature 1.0 » activé.
 - « Le processus suit les neuf étapes de l'énoncé, sur trois couloirs. Vérification de l'étudiant et de l'offre par les services SOAP, contrôle de la candidature, puis une passerelle de décision : rejet avec notification, ou enregistrement et transmission à l'entreprise. »
-- Montrer la tâche humaine « Décision de l'entreprise », la passerelle à trois issues, la boucle de complément, le minuteur, puis le sous-processus d'erreur.
-- « Si un service ne répond pas, le sous-processus d'erreur interrompt proprement le traitement et alerte le responsable. »
+- Sur le diagramme, montrer la tâche humaine « Décision de l'entreprise », la passerelle à trois issues, la boucle de complément et le minuteur.
+- « Le processus est déployé dans Bonita Community ; chaque tâche appelle les services SOAP et REST avec un compte de service. Si un service ne répond pas, le traitement s'interrompt proprement et le responsable est alerté. »
 
 **3:45 – 4:45 · L'étudiante candidate**
 - Fenêtre privée 1 : http://localhost:8090, se connecter avec `salma.elidrissi@inpt.ac.ma` / `Etudiant@2026`.
 - Montrer la liste des offres et la colonne de compatibilité. Cocher « Compatibles avec mon profil ».
 - Ouvrir « Stage AMOA – Paiement mobile » (NovaPay Maghreb). Écrire une lettre (au moins 30 caractères), « Envoyer ma candidature ».
 - Attendre « Candidature enregistrée ». « Le dépôt a démarré un cas dans Bonita. »
-- Portail Bonita : actualiser la liste des cas, montrer le nouveau cas en attente sur « Décision de l'entreprise ».
+- Bonita (BPM > Tâches > « Tâche en attente ») : actualiser, montrer la tâche « Décision de l'entreprise » du nouveau cas.
 - Retour au portail du projet : « Suivre cette candidature » : montrer le diagramme, étapes en bleu, décision en attente en ocre.
 
 **4:45 – 5:45 · L'entreprise décide**
@@ -96,7 +96,7 @@ Bonita Studio ouvert sur le diagramme ; portail Bonita (http://localhost:8080/bo
 - « Démarrer l'évaluation ». « À partir de maintenant, l'étudiante ne peut plus annuler : règle R8. »
 - Choisir « Accepter », commentaire « Profil en adéquation avec la mission. », « Enregistrer la décision », confirmer.
 - Montrer « Candidature acceptée » et le diagramme coloré jusqu'à la fin.
-- Portail Bonita : le cas est terminé (cas archivés). « La décision a exécuté la tâche humaine ; Bonita a enchaîné : place retirée, notification, dossier de stage, statut de l'étudiante. »
+- Bonita (BPM > Cas > « Cas archivés ») : actualiser, le cas est terminé. « La décision a exécuté la tâche humaine ; Bonita a enchaîné : place retirée, notification, dossier de stage, statut de l'étudiante. »
 
 **5:45 – 6:30 · Courriels et suivi**
 - Onglet Mailpit : montrer les trois courriels (confirmation de dépôt, nouvelle candidature pour l'entreprise, acceptation) ; ouvrir l'acceptation.
@@ -125,7 +125,8 @@ Bonita Studio ouvert sur le diagramme ; portail Bonita (http://localhost:8080/bo
 - Dans PowerShell : `.\scripts\arreter-service.ps1 S3`. Fenêtre 3, actualiser : bandeau « Indicateurs incomplets », S3 indisponible dans l'état des services, les autres indicateurs toujours là.
 - Fenêtre 1 : « Envoyer ma candidature » : après quelques secondes, « Traitement interrompu ».
 - Mailpit : courriel d'alerte « Incident de traitement » reçu par le responsable.
-- « Le connecteur a levé une erreur, le sous-processus a interrompu le cas et alerté le responsable. » Relancer : `.\scripts\start-all.ps1`.
+- Bonita (BPM > Tâches > « Flow nodes en erreur ») : la tâche « Vérification de l'offre » est en erreur.
+- « La tâche n'a pas pu joindre S3 : la candidature est interrompue proprement et le responsable alerté. » Relancer : `.\scripts\start-all.ps1`.
 
 **8:45 – 9:30 · Conclusion**
 - Écran : rapport, tableau des résultats de test (chapitre 9).
@@ -144,7 +145,7 @@ Bonita Studio ouvert sur le diagramme ; portail Bonita (http://localhost:8080/bo
 
 | Problème | Solution |
 |---|---|
-| Dépôt en 503 pendant la partie B | Bonita n'est pas démarré ou le processus n'est pas déployé : `start-all.ps1` l'indique. Couper, vérifier, reprendre la partie B. |
+| Dépôt en 503 pendant la partie B | Bonita n'est pas démarré ou le processus n'est pas déployé : ouvrir Bonita Studio, `deployer-bonita.ps1`, puis reprendre la partie B. |
 | Rejet R1 inattendu pour Salma | Les données ont déjà servi : `reset-db.ps1`, puis reprendre la partie. |
 | La collection Postman échoue | Elle exige une base fraîche et le mode direct : `.\scripts\tests-postman.ps1` le fait, ou `reset-db.ps1` puis `start-all.ps1 -Orchestration direct`. |
-| Le cas Bonita n'apparaît pas | Actualiser la liste des cas du portail Bonita (elle ne se met pas à jour seule). |
+| Le cas Bonita n'apparaît pas | Actualiser la liste dans l'application d'administration de Bonita (bouton de rafraîchissement : elle ne se met pas à jour seule). |
