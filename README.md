@@ -3,14 +3,35 @@
 Projet du module SOA, filière AMOA, INPT, année universitaire 2026-2027.
 Hiba Elamdaoui, Aya Zahri, Hibatollah Ait Ahmed.
 
-> Ce README est complété à chaque phase. Sa version finale arrive en phase 9.
+Plateforme de gestion des offres de stage et des candidatures, en architecture orientée services :
+
+- **trois services SOAP** (JAX-WS, contrats WSDL) : étudiants (S1), entreprises (S2), offres de stage (S3) ;
+- **trois services REST** (JAX-RS, contrats OpenAPI) : candidatures (S4), notifications par courriel (S5), suivi des stages (S6) ;
+- un **processus BPMN** exécuté par Bonita, qui orchestre le traitement d'une candidature du dépôt à la création du stage ;
+- un **portail web** pour les étudiants, les entreprises et le responsable des stages, avec l'avancement de chaque candidature sur le diagramme BPMN.
+
+Chaque service est un processus Java indépendant avec son propre schéma MySQL. Onze règles de gestion (R1 à R11) encadrent le traitement.
+Le rapport technique est dans [rapport/rapport.pdf](rapport/rapport.pdf).
 
 ## Prérequis
 
 - JDK 17, Maven 3.9, Docker Desktop (Windows, avec WSL 2).
-- SoapUI Open Source pour les tests SOAP, Node.js LTS pour les tests Postman (Newman est installé automatiquement dans `tests\postman`).
+- Bonita Studio Community 2025.2 pour l'orchestration par le processus BPMN (sinon, mode `direct`).
+- SoapUI Open Source pour les tests SOAP, Node.js LTS pour Newman, le test de bout en bout et Playwright (installés automatiquement par les scripts), Microsoft Edge pour le parcours de l'interface.
+- Pour recompiler le rapport : MiKTeX ou TeX Live avec XeLaTeX (ou Overleaf, compilateur XeLaTeX).
 
-## Démarrage
+## Démarrage rapide
+
+```powershell
+git clone <adresse du dépôt>
+cd <dossier du dépôt>
+.\scripts\start-all.ps1 -Rebuild -Orchestration direct   # construit, démarre Docker et les sept services
+```
+
+Puis ouvrir http://localhost:8090 et se connecter avec un compte de démonstration (plus bas). Pour le mode `bonita` (par défaut),
+déployer d'abord le processus en suivant [docs/bonita/GUIDE_BONITA.md](docs/bonita/GUIDE_BONITA.md).
+
+## Commandes
 
 Depuis PowerShell, à la racine du projet :
 
@@ -26,6 +47,22 @@ Depuis PowerShell, à la racine du projet :
 
 Si PowerShell refuse d'exécuter les scripts :
 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, ou `powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1`.
+
+## Organisation du dépôt
+
+| Dossier | Contenu |
+|---|---|
+| `common` | Socle commun : configuration, base de données, sécurité SOAP et REST, erreurs, corrélation |
+| `contracts` | WSDL des trois services SOAP (ils font foi) et classes générées par wsimport |
+| `soap-etudiants`, `soap-entreprises`, `soap-offres` | Services S1, S2, S3 |
+| `rest-candidatures`, `rest-notifications`, `rest-suivi` | Services S4, S5, S6 (contrat dans `src/main/resources/openapi.yaml`) |
+| `portal-gateway` | Portail : API des trois espaces et interface web (`src/main/resources/public`) |
+| `bpmn` | Processus BPMN « Candidature » (fichier à importer dans Bonita) |
+| `db/init` | Schémas, comptes et données de démonstration |
+| `scripts` | Scripts PowerShell : démarrage, arrêt, réinitialisation, tests |
+| `tests` | SoapUI, Postman, test de bout en bout, simulation Bonita, parcours de l'interface |
+| `docs` | Guides (Bonita, sécurité SOAP, scénarios, vidéo, captures) et journal du projet |
+| `rapport` | Rapport LaTeX, ses générateurs (`outils`) et le PDF |
 
 ## Ports
 

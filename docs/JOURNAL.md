@@ -253,3 +253,18 @@ Avec S3 arrêté, S4 répondait correctement 503 `SERVICE_OFFRES_INDISPONIBLE` (
 
 ### Reste à faire par vous
 - Enregistrer la vidéo (processus déployé dans Bonita Studio).
+
+## Phase 9 – Vérification depuis un clone neuf, README final
+
+### Vérification (10/11)
+Clone neuf du dépôt dans un dossier dont le chemin contient un espace, puis, depuis ce clone uniquement :
+`reset-db.ps1`, `build.ps1 clean verify` (356 tests, dont 44 sur MySQL, BUILD SUCCESS), `start-all.ps1 -Orchestration direct`,
+`verifier-socle.ps1` (68/68), `tests-postman.ps1` (Newman installé à neuf, tout réussi), `test-bout-en-bout.ps1` (59 + 6),
+`tests-soapui.ps1` (toutes les suites), `rapport\compiler.ps1` (65 pages). Aucun fichier manquant dans le dépôt.
+
+### README
+Version finale : présentation, prérequis, démarrage rapide, commandes, organisation du dépôt, ports, services, tests, comptes, documentation.
+
+### Reste à faire
+- Publication sur GitHub : connexion (`gh auth login`) et nom du dépôt à fournir.
+- Par vous : processus dans Bonita Studio, captures, nom du professeur, vidéo.
