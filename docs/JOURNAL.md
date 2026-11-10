@@ -305,3 +305,13 @@ Version finale : présentation, prérequis, démarrage rapide, commandes, organi
   Source Serif 4 et Public Sans ; cartes arrondies, pastilles d'état, transitions courtes (désactivées si l'utilisateur réduit les animations).
 - Les 28 captures de l'interface sont refaites (`captures-ui.ps1` : aucune erreur de console, aucune réponse 5xx).
 - `tests/ui/apercu.mjs` : aperçu rapide de cinq écrans, sans modifier les données.
+
+## Portail : deuxième refonte, thème zellige (10/11)
+
+- Demande : une interface plus créative et colorée, qui ne ressemble pas à un modèle générique, et ouverte à tous les étudiants
+  (mention « Filière Innovation & AMOA » retirée du portail).
+- Motif : l'étoile à huit branches du zellige (bandeau, en-têtes de page pleine largeur, puces, mur de carreaux de la page de connexion,
+  frise du pied de page) ; couleurs du logo INPT et des carreaux (safran, sarcelle, terre cuite).
+- Offres de l'espace étudiant en cartes ; indicateurs du tableau de bord en carreaux pleins ; barres de répartition à la couleur du statut.
+- Polices : Bricolage Grotesque (titres) et Hanken Grotesk (texte), à la place de Red Hat.
+- Captures : contexte Playwright en `reducedMotion: "reduce"`, pour ne jamais photographier une animation en cours.

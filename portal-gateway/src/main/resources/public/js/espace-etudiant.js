@@ -39,14 +39,8 @@ async function offres(contenu) {
       vider(resultat, vide("Aucune offre ne correspond", "Modifiez la recherche ou retirez des filtres."));
       return;
     }
-    vider(resultat, h("p", { class: "discret" }, `${liste.length} offre(s) ouverte(s)`), tableau([
-      { titre: "Offre", valeur: o => [h("a", { class: "lien-ligne", href: `#/etudiant/offres/${o.id}` }, o.titre), h("div", { class: "secondaire" }, o.entreprise)] },
-      { titre: "Ville", valeur: o => o.ville },
-      { titre: "Durée", valeur: o => `${o.dureeSemaines} semaines`, classe: "nombre" },
-      { titre: "Candidatures jusqu'au", valeur: o => { const d = delai(o.dateLimite); return [dateCourte(o.dateLimite), h("div", { class: d.proche ? "" : "discret" }, d.proche ? h("strong", {}, d.texte) : d.texte)]; } },
-      { titre: "Places", valeur: o => nombre(o.nombrePlaces), classe: "nombre" },
-      { titre: "Compatibilité", valeur: o => indicateurCompatibilite(o.compatibilite) },
-    ], liste, "Offres de stage ouvertes"));
+    vider(resultat, h("p", { class: "compte" }, h("strong", {}, String(liste.length)), ` offre${liste.length > 1 ? "s" : ""} ouverte${liste.length > 1 ? "s" : ""}`),
+      h("ul", { class: "offres", "aria-label": "Offres de stage ouvertes" }, liste.map(carteOffre)));
   };
 
   const charger = async () => {
@@ -72,6 +66,32 @@ async function offres(contenu) {
     resultat);
   compatibles.addEventListener("change", dessiner);
   await charger();
+}
+
+const TEINTES = ["bleu", "sarcelle", "safran", "terre", "nuit"];
+
+/** Teinte stable d'une entreprise (même entreprise, même couleur sur toutes les cartes). */
+function teinte(nom) {
+  let somme = 0;
+  for (const c of nom) somme = (somme * 31 + c.charCodeAt(0)) >>> 0;
+  return TEINTES[somme % TEINTES.length];
+}
+
+/** Carte d'une offre : monogramme de l'entreprise, titre, repères (ville, durée, places), date limite, compatibilité. */
+function carteOffre(o) {
+  const d = delai(o.dateLimite);
+  const sigle = o.entreprise.split(/\s+/).filter(m => m.length > 2).slice(0, 2).map(m => m[0].toUpperCase()).join("") || o.entreprise.slice(0, 2).toUpperCase();
+  const c = o.compatibilite;
+  return h("li", { class: `offre ${teinte(o.entreprise)}${c && !c.compatible ? " incompatible" : ""}` },
+    h("div", { class: "offre-tete" },
+      h("span", { class: "monogramme", "aria-hidden": "true" }, sigle),
+      h("div", {},
+        h("a", { class: "offre-titre", href: `#/etudiant/offres/${o.id}` }, o.titre),
+        h("div", { class: "offre-entreprise" }, o.entreprise))),
+    h("ul", { class: "reperes" },
+      h("li", {}, o.ville), h("li", {}, `${o.dureeSemaines} semaines`), h("li", {}, `${nombre(o.nombrePlaces)} place${o.nombrePlaces > 1 ? "s" : ""}`)),
+    h("div", { class: `echeance${d.proche ? " proche" : ""}` }, h("span", {}, `Jusqu'au ${dateCourte(o.dateLimite)}`), h("strong", {}, d.texte)),
+    h("div", { class: "offre-pied" }, indicateurCompatibilite(c)));
 }
 
 async function offre(id, contenu) {

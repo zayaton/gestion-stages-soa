@@ -26,7 +26,7 @@ const problemes = [];
 let captures = 0;
 
 const navigateur = await chromium.launch({ channel: CANAL });
-const contexte = await navigateur.newContext({ viewport: { width: 1360, height: 860 }, locale: "fr-FR", deviceScaleFactor: 1 });
+const contexte = await navigateur.newContext({ viewport: { width: 1360, height: 860 }, locale: "fr-FR", deviceScaleFactor: 1, reducedMotion: "reduce" }); // captures nettes : pas d'animation en cours
 
 async function nouvellePage() {
   const page = await contexte.newPage();
