@@ -1,35 +1,53 @@
-% Page de couverture : tout est placé en coordonnées absolues (aucun débordement possible sur la page suivante).
+% Page de couverture, sur le modèle des rapports de TP du module (logos ANRT et INPT, bâtiment de l'INPT en pied de page).
 \begin{titlepage}
 \thispagestyle{empty}
-\begin{tikzpicture}[remember picture, overlay]
-  \coordinate (HG) at (current page.north west);
-  % Bandeau institutionnel
-  \fill[inpt] (HG) rectangle ([xshift=62mm]current page.south west);
-  \node[anchor=north west, text=white, font=\titres\bfseries\fontsize{34}{36}\selectfont, inner sep=0]
-    at ([xshift=16mm, yshift=-26mm]HG) {INPT};
-  \node[anchor=north west, text=white, font=\titres\small, text width=40mm, inner sep=0, align=left]
-    at ([xshift=16mm, yshift=-44mm]HG)
-    {Institut National\\des Postes et\\Télécommunications\\[4pt]Rabat};
-  \node[anchor=south west, text=white, font=\titres\small, text width=40mm, inner sep=0, align=left]
-    at ([xshift=16mm, yshift=22mm]current page.south west)
-    {Filière AMOA\\Module SOA\\[4pt]Année universitaire\\2026-2027};
+\newgeometry{top=18mm, bottom=18mm, left=22mm, right=22mm}
+\centering
 
-  % Bloc principal
-  \begin{scope}[every node/.style={anchor=north west, inner sep=0, align=left, text width=108mm, execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}}]
-    \node[font=\titres\small, text=inpt] at ([xshift=78mm, yshift=-62mm]HG)
-      {\MakeUppercase{Rapport technique · Projet SOA}};
-    \node[font=\bfseries\fontsize{29}{35}\selectfont, text=encre] at ([xshift=78mm, yshift=-76mm]HG)
-      {Gestion intelligente des stages et des offres de recrutement};
-    \fill[inpt] ([xshift=78mm, yshift=-122mm]HG) rectangle ++(30mm, -1.2pt);
-    \node[font=\large, text=encre2] at ([xshift=78mm, yshift=-130mm]HG)
-      {Trois services SOAP, trois services REST, un processus BPMN orchestré par Bonita et une interface pour les étudiants, les entreprises et le responsable des stages.};
+\begin{minipage}[c]{0.5\textwidth}\raggedright
+  \includegraphics[height=21mm]{logo-anrt.png}
+\end{minipage}%
+\begin{minipage}[c]{0.5\textwidth}\raggedleft
+  \includegraphics[height=19mm]{logo-inpt.png}
+\end{minipage}
 
-    \node[font=\titres\small, text=encre2] at ([xshift=78mm, yshift=-190mm]HG) {\MakeUppercase{Réalisé par}};
-    \node[font=\large, text=encre] at ([xshift=78mm, yshift=-197mm]HG) {Hiba Elamdaoui\\Aya Zahri\\Hibatollah Ait Ahmed};
+\vspace{26mm}
+{\Large\textsc{Filière Innovation \& AMOA}\par}
+\vspace{6mm}
+{\LARGE RAPPORT DE PROJET\par}
+\vspace{9mm}
+{\color{encre}\rule{0.72\textwidth}{0.9pt}\par}
+\vspace{6mm}
+{\color{inpt}\huge\bfseries Gestion intelligente des stages\\[3pt] et des offres de recrutement\par}
+\vspace{4mm}
+{\color{encre}\rule{0.72\textwidth}{0.9pt}\par}
 
-    \node[font=\titres\small, text=encre2] at ([xshift=78mm, yshift=-226mm]HG) {\MakeUppercase{Encadré par}};
-    \node[font=\large, text=encre] at ([xshift=78mm, yshift=-233mm]HG) {Pr. GUERMAH HATIM};
-  \end{scope}
-\end{tikzpicture}
-\null
+\vspace{14mm}
+{\large\textbf{Thème :} architecture orientée services, trois services SOAP, trois services REST\\[2pt]
+et un processus BPMN orchestré par Bonita.\par}
+
+\vspace{24mm}
+\begin{minipage}[t]{0.48\textwidth}\raggedright\large
+  \textbf{Réalisé par :}\\[4pt]
+  Hiba \textsc{Elamdaoui}\\
+  Aya \textsc{Zahri}\\
+  Hibatollah \textsc{Ait Ahmed}
+\end{minipage}%
+\begin{minipage}[t]{0.48\textwidth}\raggedleft\large
+  \textbf{Enseignant :}\\[4pt]
+  Pr. Hatim \textsc{Guermah}
+\end{minipage}
+
+\vspace{12mm}
+{\large\textbf{Module :} SOA\par}
+
+\vfill
+\includegraphics[height=17mm]{logo-zlafa.png}\par
+\vspace{5mm}
+{\large\textsc{Agence Nationale de Réglementation des Télécommunications}\\[2pt]
+\textsc{Institut National des Postes et Télécommunications}\par}
+\vspace{2mm}
+{Année universitaire : 2026/2027\par}
+
+\restoregeometry
 \end{titlepage}

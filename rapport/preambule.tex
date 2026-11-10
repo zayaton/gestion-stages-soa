@@ -4,20 +4,19 @@
 \usepackage{geometry}
 \geometry{a4paper, top=24mm, bottom=24mm, left=25mm, right=22mm, headheight=14pt}
 
-% Polices : les mêmes familles que l'interface (Source Serif 4, Public Sans), libres (OFL), fournies dans polices/.
-\setmainfont{SourceSerif4}[Path=polices/, Extension=.ttf, UprightFont=*-Regular, BoldFont=*-SemiBold, ItalicFont=*-Italic,
-  BoldItalicFont=*-SemiBold, BoldItalicFeatures={FakeSlant=0.18}]
-\setsansfont{PublicSans}[Path=polices/, Extension=.ttf, UprightFont=*-Regular, BoldFont=*-SemiBold]
-\setmonofont{Latin Modern Mono}[Scale=1.02]
-\newfontfamily\titres{PublicSans}[Path=polices/, Extension=.ttf, UprightFont=*-SemiBold, BoldFont=*-Bold]
+% Polices : Latin Modern, la police standard de LaTeX (même rendu que les rapports de TP du module).
+\setmainfont{Latin Modern Roman}[SmallCapsFont={Latin Modern Roman Caps}]
+\setsansfont{Latin Modern Sans}
+\setmonofont{Latin Modern Mono}[Scale=1.02, BoldFont={lmmonolt10-bold.otf}]
+\newcommand{\titres}{\rmfamily}
 
 \usepackage{xcolor}
-\definecolor{inpt}{HTML}{003F8A}
-\definecolor{inptpale}{HTML}{E9EEF5}
-\definecolor{encre}{HTML}{1E1C1A}
-\definecolor{encre2}{HTML}{55504A}
-\definecolor{filet}{HTML}{C9C4BC}
-\definecolor{papier}{HTML}{F4F2ED}
+\definecolor{inpt}{HTML}{0B5A99}   % bleu des titres : bleu du logo INPT (007BC7) assombri pour la lecture
+\definecolor{inptpale}{HTML}{EAF3FA}
+\definecolor{encre}{HTML}{000000}
+\definecolor{encre2}{HTML}{4A4A4A}
+\definecolor{filet}{HTML}{000000}
+\definecolor{papier}{HTML}{F5F7FA}
 \definecolor{ok}{HTML}{1F6B3A}
 \definecolor{ko}{HTML}{9B2C2C}
 \definecolor{attente}{HTML}{8A5A00}
@@ -46,16 +45,15 @@
 
 % Titres
 \usepackage{titlesec}
-\titleformat{\chapter}[display]
-  {\titres\color{encre}}
-  {\color{inpt}\large\MakeUppercase{Chapitre}~\thechapter}
-  {4pt}
-  {\Huge\bfseries}
-  [\vspace{6pt}{\color{inpt}\titlerule[1.2pt]}]
-\titlespacing*{\chapter}{0pt}{-24pt}{18pt}
-\titleformat{\section}{\titres\Large\bfseries\color{encre}}{\color{inpt}\thesection}{0.8em}{}
-\titleformat{\subsection}{\titres\large\bfseries\color{encre}}{\color{inpt}\thesubsection}{0.8em}{}
-\titleformat{\subsubsection}{\titres\normalsize\bfseries\color{encre2}}{}{0em}{}
+\titleformat{\chapter}[hang]
+  {\huge\bfseries\color{inpt}}
+  {\thechapter.}
+  {0.5em}
+  {}
+\titlespacing*{\chapter}{0pt}{-12pt}{16pt}
+\titleformat{\section}{\Large\bfseries\color{inpt}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries\color{inpt}}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{encre}}{}{0em}{}
 \titlespacing*{\section}{0pt}{18pt}{8pt}
 \titlespacing*{\subsection}{0pt}{14pt}{6pt}
 
@@ -65,16 +63,21 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\headrule}{{\color{filet}\hrule height\headrulewidth width\headwidth}}
-\fancyhead[L]{\small\titres\color{encre2}\leftmark}
-\fancyhead[R]{\small\titres\color{inpt}INPT · Projet SOA}
-\fancyfoot[C]{\small\titres\color{encre2}\thepage}
+\fancyhead[L]{\small\color{inpt}Projet SOA -- Gestion des stages}
+\fancyhead[R]{\small\color{inpt}INPT -- \textsc{Module SOA}}
+\fancyfoot[C]{\small\thepage}
 \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
-\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}\renewcommand{\headrule}{}\fancyfoot[C]{\small\titres\color{encre2}\thepage}}
+\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}\renewcommand{\headrule}{}\fancyfoot[C]{\small\thepage}}
 
 % Légendes (sans le paquet caption, absent de l'installation MiKTeX de base)
 \makeatletter
-\renewcommand{\fnum@figure}{\titres\small\color{inpt}Figure~\thefigure}
-\renewcommand{\fnum@table}{\titres\small\color{inpt}Tableau~\thetable}
+\renewcommand{\fnum@figure}{\textsc{Figure}~\thefigure}
+\renewcommand{\fnum@table}{\textsc{Tableau}~\thetable}
+% « Figure 1 – texte », comme dans les rapports de TP
+\long\def\@makecaption#1#2{\vskip\abovecaptionskip
+  \sbox\@tempboxa{#1 -- #2}%
+  \ifdim \wd\@tempboxa >\hsize #1 -- #2\par\else\global\@minipagefalse\hb@xt@\hsize{\hfil\box\@tempboxa\hfil}\fi
+  \vskip\belowcaptionskip}
 \makeatother
 
 \usepackage[hidelinks, pdfusetitle]{hyperref}

@@ -58,19 +58,23 @@ function pageConnexion(messageInitial) {
       h("td", {}, role), h("td", {}, h("button", { type: "button", onclick: () => { identifiant.value = id; motDePasse.value = mdp; identifiant.focus(); } }, id)))))),
     h("p", { class: "discret" }, "Tous les comptes de démonstration figurent dans le README. Données fictives."));
 
+  delete document.body.dataset.espace;
   vider(racine, h("div", { class: "connexion" },
     h("section", { class: "connexion-presentation" },
+      h("div", { class: "triangles", "aria-hidden": "true" }, h("span"), h("span"), h("span")),
       h("div", {},
-        h("span", { class: "marque-sigle" }, "INPT"),
+        h("p", { class: "surtitre" }, "Institut National des Postes et Télécommunications"),
         h("h1", {}, "Plateforme des stages et des offres de recrutement"),
         h("p", {}, "Offres des entreprises partenaires, candidatures des étudiants, décisions et suivi des stages, dans un seul circuit."),
-        h("ol", {},
-          h("li", {}, "L'étudiant consulte les offres compatibles avec sa filière et candidate."),
-          h("li", {}, "Le dossier est vérifié automatiquement, puis transmis à l'entreprise."),
-          h("li", {}, "L'entreprise décide ; le stage est créé et suivi jusqu'à l'évaluation."))),
-      h("p", { class: "bas" }, "Institut National des Postes et Télécommunications, Rabat. Filière AMOA, module SOA, 2026-2027.")),
+        h("ol", { class: "circuit" },
+          h("li", { class: "etudiant" }, h("strong", {}, "Étudiant"), "Consulte les offres compatibles avec sa filière et candidate."),
+          h("li", { class: "responsable" }, h("strong", {}, "Vérification"), "Le dossier est contrôlé automatiquement, puis transmis à l'entreprise."),
+          h("li", { class: "entreprise" }, h("strong", {}, "Entreprise"), "Décide ; le stage est créé et suivi jusqu'à l'évaluation."))),
+      h("p", { class: "bas" }, "Rabat · Filière Innovation & AMOA · Module SOA · 2026-2027")),
     h("section", { class: "connexion-formulaire" },
-      h("div", { class: "cadre" }, h("h2", {}, "Connexion"), h("p", { class: "secondaire" }, "Étudiants, entreprises partenaires et responsable des stages."),
+      h("div", { class: "cadre" },
+        h("img", { class: "connexion-logo", src: "/img/logo-inpt.png", alt: "INPT, Institut National des Postes et Télécommunications" }),
+        h("h2", {}, "Connexion"), h("p", { class: "secondaire" }, "Étudiants, entreprises partenaires et responsable des stages."),
         retour, formulaire, demo))));
   identifiant.focus();
 }
@@ -98,17 +102,24 @@ function cadre(espace, route) {
     return h("li", {}, h("a", { href, "aria-current": route.page === page ? "page" : null }, texte));
   });
   const contenu = h("main", { id: "contenu", tabindex: "-1" });
+  const initiales = (utilisateur.nom || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(m => m[0].toUpperCase()).join("");
+  document.body.dataset.espace = espace.base;
   vider(racine,
     h("a", { href: "#contenu", class: "cache", onclick: ev => { ev.preventDefault(); contenu.focus(); } }, "Aller au contenu"),
     h("header", { class: "bandeau" },
       h("div", { class: "bandeau-interieur" },
-        h("a", { class: "marque", href: `#/${espace.base}/${espace.accueil}` }, h("span", { class: "marque-sigle" }, "INPT"), h("span", { class: "marque-nom" }, "Plateforme des stages")),
+        h("a", { class: "marque", href: `#/${espace.base}/${espace.accueil}` },
+          h("img", { class: "marque-logo", src: "/img/logo-inpt.png", alt: "INPT" }),
+          h("span", { class: "marque-texte" }, h("span", { class: "marque-nom" }, "Plateforme des stages"), h("span", { class: "marque-sous" }, "Filière Innovation & AMOA"))),
         h("div", { class: "bandeau-utilisateur" },
-          h("div", {}, h("div", { class: "role" }, espace.nom), h("div", {}, utilisateur.nom)),
-          h("button", { class: "bouton secondaire", onclick: deconnecter }, "Se déconnecter")))),
-    h("nav", { class: "navigation", "aria-label": espace.nom }, h("ul", {}, liens)),
+          h("span", { class: "avatar", "aria-hidden": "true" }, initiales),
+          h("div", {}, h("div", { class: "role" }, espace.nom), h("div", { class: "nom" }, utilisateur.nom)),
+          h("button", { class: "bouton secondaire", onclick: deconnecter }, "Se déconnecter"))),
+      h("nav", { class: "navigation", "aria-label": espace.nom }, h("ul", {}, liens))),
     contenu,
-    h("footer", { class: "pied" }, "INPT · Plateforme des stages · Données de démonstration fictives"));
+    h("footer", { class: "pied" },
+      h("img", { src: "/img/logo-inpt.png", alt: "", class: "pied-logo" }),
+      h("span", {}, "Institut National des Postes et Télécommunications, Rabat · Plateforme des stages · Données de démonstration fictives")));
   return contenu;
 }
 

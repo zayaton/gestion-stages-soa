@@ -294,3 +294,14 @@ Version finale : présentation, prérequis, démarrage rapide, commandes, organi
 - En mode secours, une panne met la tâche « en erreur » dans Bonita (incident signalé à S4 et au responsable par la classe)
   au lieu de déclencher le sous-processus d'erreur du modèle.
 - Le processus déployé n'est pas un diagramme modifiable dans le Studio (construit par programme).
+
+## Refonte visuelle du portail et du rapport (10/11)
+
+### Réalisé
+- **Rapport** : aspect LaTeX classique (Latin Modern), titres bleus, en-tête « INPT – Module SOA » ; page de garde sur le modèle
+  des rapports de TP du module (logos ANRT et INPT en haut, bâtiment de l'INPT en bas, enseignant Pr. Hatim Guermah).
+- **Portail** : logo de l'INPT dans le bandeau, en pied de page et sur la connexion ; palette tirée du logo (007BC7 et ses triangles) ;
+  une couleur par espace (étudiant bleu, entreprise sarcelle, responsable terre cuite) ; Red Hat Display et Red Hat Text à la place de
+  Source Serif 4 et Public Sans ; cartes arrondies, pastilles d'état, transitions courtes (désactivées si l'utilisateur réduit les animations).
+- Les 28 captures de l'interface sont refaites (`captures-ui.ps1` : aucune erreur de console, aucune réponse 5xx).
+- `tests/ui/apercu.mjs` : aperçu rapide de cinq écrans, sans modifier les données.
