@@ -324,3 +324,4 @@ Version finale : présentation, prérequis, démarrage rapide, commandes, organi
 - Palette : bleu nuit 14273D, bleu INPT assourdi 1F5F96, sarcelle 3D7570, ocre A8803E, brique 9A5236 ; couleurs d'état adoucies.
 - Le mur de zellige et les étoiles sont retirés.
 - Retouches : plus d'illustration dans les états vides ; page de connexion réduite au titre (texte de présentation et liste des trois acteurs retirés).
+- Connexion : texte de présentation et trois acteurs rétablis, plus bas sous le titre et en plus grand.
