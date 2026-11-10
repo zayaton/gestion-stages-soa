@@ -315,3 +315,11 @@ Version finale : présentation, prérequis, démarrage rapide, commandes, organi
 - Offres de l'espace étudiant en cartes ; indicateurs du tableau de bord en carreaux pleins ; barres de répartition à la couleur du statut.
 - Polices : Bricolage Grotesque (titres) et Hanken Grotesk (texte), à la place de Red Hat.
 - Captures : contexte Playwright en `reducedMotion: "reduce"`, pour ne jamais photographier une animation en cours.
+
+## Portail : thème Zlafa, palette sobre (10/11)
+
+- Demande : s'inspirer de la Zlafa (bâtiment de l'INPT) et adopter des couleurs moins vives, plus professionnelles.
+- Silhouette de la Zlafa (tirée de `logo-zlafa.png`, rendue transparente : `img/zlafa-blanc.png`, `img/zlafa.png`) sur la connexion,
+  les en-têtes de page, les indicateurs, les états vides et le pied de page ; motif d'arcs entrecroisés ; repère en forme d'arche.
+- Palette : bleu nuit 14273D, bleu INPT assourdi 1F5F96, sarcelle 3D7570, ocre A8803E, brique 9A5236 ; couleurs d'état adoucies.
+- Le mur de zellige et les étoiles sont retirés.

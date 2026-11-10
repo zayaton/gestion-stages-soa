@@ -61,7 +61,7 @@ function pageConnexion(messageInitial) {
   delete document.body.dataset.espace;
   vider(racine, h("div", { class: "connexion" },
     h("section", { class: "connexion-presentation" },
-      mosaique(),
+      h("div", { class: "zlafa-scene", "aria-hidden": "true" }, h("img", { src: "/img/zlafa-blanc.png", alt: "" })),
       h("div", { class: "connexion-carte" },
         h("p", { class: "surtitre" }, "Institut National des Postes et Télécommunications"),
         h("h1", {}, "La plateforme des stages", h("br"), h("span", {}, "et des offres de recrutement")),
@@ -77,20 +77,6 @@ function pageConnexion(messageInitial) {
         retour, formulaire, demo,
         h("p", { class: "connexion-pied" }, "INPT · Rabat · Année universitaire 2026-2027")))));
   identifiant.focus();
-}
-
-/** Mur de zellige : une grille de carreaux, chacun orné d'une étoile à huit branches, aux couleurs de la plateforme. */
-function mosaique() {
-  const COULEURS = ["bleu", "nuit", "ciel", "safran", "sarcelle", "bleu", "terre", "nuit", "sable"];
-  const carreaux = [];
-  for (let ligne = 0; ligne < 10; ligne++) {
-    for (let col = 0; col < 8; col++) {
-      // Disposition fixe (pas de hasard) : la page est identique à chaque visite.
-      const c = COULEURS[(ligne * 5 + col * 3 + ((ligne * col) % 4)) % COULEURS.length];
-      carreaux.push(h("span", { class: `carreau ${c}` }));
-    }
-  }
-  return h("div", { class: "mosaique", "aria-hidden": "true" }, carreaux);
 }
 
 async function deconnecter() {
@@ -132,7 +118,7 @@ function cadre(espace, route) {
       h("nav", { class: "navigation", "aria-label": espace.nom }, h("ul", {}, liens))),
     contenu,
     h("footer", { class: "pied" },
-      h("div", { class: "pied-frise", "aria-hidden": "true" }),
+      h("div", { class: "pied-frise", "aria-hidden": "true" }, h("img", { src: "/img/zlafa-blanc.png", alt: "" })),
       h("div", { class: "pied-interieur" },
         h("img", { src: "/img/logo-inpt.png", alt: "INPT", class: "pied-logo" }),
         h("span", {}, "Institut National des Postes et Télécommunications · Rabat"),
